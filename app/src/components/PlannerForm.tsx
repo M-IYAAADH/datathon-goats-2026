@@ -35,7 +35,17 @@ export function PlannerForm({
   const [officialOnly, setOfficialOnly] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const sorted = useMemo(() => [...stops].sort((a, b) => a.name.localeCompare(b.name)), [stops]);
+  // Some island names repeat across atolls; add the atoll so each option is distinct.
+  const sorted = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of stops) counts.set(s.name, (counts.get(s.name) ?? 0) + 1);
+    return stops
+      .map((s) => ({
+        id: s.id,
+        label: (counts.get(s.name) ?? 0) > 1 ? `${s.name} (${s.atoll})` : s.name,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [stops]);
 
   function swap() {
     setOrigin(destination);
@@ -68,7 +78,7 @@ export function PlannerForm({
 
   const options = sorted.map((s) => (
     <option key={s.id} value={s.id}>
-      {s.name}
+      {s.label}
     </option>
   ));
 
