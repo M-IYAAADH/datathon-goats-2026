@@ -11,7 +11,11 @@ import {
 } from '../data/planner';
 import './JourneyTimeline.css';
 
-type Props = { journey: Journey; bundle: Bundle; query: Query };
+/** A wait alternative the user chose to see on the map: the rides up to the change, then the alternative's rides. */
+export type AltRoute = { key: string; rides: Ride[] };
+type ShowAlt = { shownAlt: string | null; onShowAlt: (alt: AltRoute | null) => void };
+
+type Props = { journey: Journey; bundle: Bundle; query: Query } & ShowAlt;
 
 const DASH = '–';
 /** Wait bars stop growing at this many minutes so one long wait cannot dwarf the layout. */
@@ -88,13 +92,15 @@ function Alternatives({
   journey,
   transferIndex,
   name,
+  shownAlt,
+  onShowAlt,
 }: {
   bundle: Bundle;
   query: Query;
   journey: Journey;
   transferIndex: number;
   name: (id: string) => string;
-}) {
+} & ShowAlt) {
   const result = useMemo(
     () => findWaitAlternatives(bundle, query, journey, transferIndex),
     [bundle, query, journey, transferIndex],
@@ -112,6 +118,12 @@ function Alternatives({
             const sources = Array.from(
               new Set(a.journey.rides.map((r) => (r.source === 'mtcc' ? 'Official' : 'Inferred'))),
             );
+            const key = `${journey.id}#${transferIndex}#${a.journey.id}`;
+            const shown = shownAlt === key;
+            const rides = [
+              ...journey.rides.slice(0, journey.transfers[transferIndex].fromRide + 1),
+              ...a.journey.rides,
+            ];
             return (
               <li key={a.journey.id} className="tl-alt">
                 <p className="tl-alt-times">
@@ -131,6 +143,14 @@ function Alternatives({
                     </span>
                   ))}
                 </p>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  aria-pressed={shown}
+                  onClick={() => onShowAlt(shown ? null : { key, rides })}
+                >
+                  {shown ? 'Hide on map' : 'Show on map'}
+                </button>
               </li>
             );
           })}
@@ -147,6 +167,8 @@ function WaitRow({
   query,
   index,
   name,
+  shownAlt,
+  onShowAlt,
 }: {
   transfer: Transfer;
   journey: Journey;
@@ -154,7 +176,7 @@ function WaitRow({
   query: Query;
   index: number;
   name: (id: string) => string;
-}) {
+} & ShowAlt) {
   const a = transfer.assessment;
   const barPct = Math.min(100, Math.round((a.waitMin[1] / BAR_CAP_MIN) * 100));
   return (
@@ -181,13 +203,15 @@ function WaitRow({
           journey={journey}
           transferIndex={index}
           name={name}
+          shownAlt={shownAlt}
+          onShowAlt={onShowAlt}
         />
       )}
     </li>
   );
 }
 
-export function JourneyTimeline({ journey, bundle, query }: Props) {
+export function JourneyTimeline({ journey, bundle, query, shownAlt, onShowAlt }: Props) {
   const names = useMemo(() => new Map(bundle.stops.map((s) => [s.id, s.name])), [bundle.stops]);
   const name = (id: string) => names.get(id) ?? id;
   return (
@@ -205,6 +229,8 @@ export function JourneyTimeline({ journey, bundle, query }: Props) {
                 query={query}
                 index={i}
                 name={name}
+                shownAlt={shownAlt}
+                onShowAlt={onShowAlt}
               />
             )}
           </Fragment>

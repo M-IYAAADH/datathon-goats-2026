@@ -6,7 +6,7 @@ type LegendItem = { label: string; token: string; width: number; dash?: string }
 const ITEMS: LegendItem[] = [
   { label: 'Official ferry (solid)', token: '--map-official', width: 2.5 },
   { label: 'Inferred service (dashed)', token: '--map-inferred', width: 2.5, dash: '6 4' },
-  { label: 'Selected journey', token: '--map-highlight', width: 5 },
+  { label: 'Selected journey (glow)', token: '--map-highlight', width: 5 },
   { label: 'Cancelled (simulated)', token: '--map-cancelled', width: 4, dash: '3 3' },
 ];
 
@@ -49,6 +49,10 @@ export function Legend() {
             <span>{item.label}</span>
           </li>
         ))}
+        <li>
+          <span aria-hidden="true">{'\u26F4'}</span>
+          <span>Boat, where you board (with departure time)</span>
+        </li>
       </ul>
     </details>
   );

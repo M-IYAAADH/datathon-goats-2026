@@ -21,10 +21,14 @@ setWorkerUrl(workerUrl);
 
 export type MapConfig = { minDevices: number; minDays: number };
 
+/** A boat on the shown route, marked at the stop where you board it. */
+export type BoatMarker = { stopId: string; label: string; official: boolean };
+
 type MapViewProps = {
   stops: Stop[];
   legs: Leg[];
   highlightLegIds?: string[];
+  boats?: BoatMarker[];
   cancelledLegIds?: string[];
   config?: MapConfig;
   onStopClick?: (stopId: string) => void;
@@ -75,8 +79,7 @@ function inferredVisible(leg: Leg, config?: MapConfig): boolean {
   return ev !== null && ev.devices >= config.minDevices && ev.days >= config.minDays;
 }
 
-// One straight line per unordered stop pair and source, so an inferred service on an
-// official pair still shows (drawn offset beside the official line).
+// One straight line per unordered stop pair and source.
 function dedupe(legs: Leg[], byId: Map<string, Stop>): Segment[] {
   const out = new Map<string, Segment>();
   for (const leg of legs) {
@@ -104,8 +107,9 @@ export function buildSegments(
   const hi = new Set(highlightLegIds);
   const cx = new Set(cancelledLegIds);
   return {
+    // Only the shown route is drawn: no lines until a journey is selected.
     base: dedupe(
-      legs.filter((l) => inferredVisible(l, config)),
+      legs.filter((l) => hi.has(l.id) && inferredVisible(l, config)),
       byId,
     ),
     highlight: dedupe(
@@ -294,6 +298,13 @@ function buildStyle(c: MapColors): Exclude<MapOptions['style'], string | undefin
         paint: { 'line-color': c.landOutline, 'line-width': 0.6 },
       },
       {
+        id: 'lines-highlight',
+        type: 'line',
+        source: 'highlight',
+        layout: { 'line-cap': 'round' },
+        paint: { 'line-color': c.highlight, 'line-width': 10, 'line-opacity': 0.35 },
+      },
+      {
         id: 'lines-official',
         type: 'line',
         source: 'lines',
@@ -309,15 +320,7 @@ function buildStyle(c: MapColors): Exclude<MapOptions['style'], string | undefin
           'line-color': c.inferred,
           'line-width': 2.5,
           'line-dasharray': [3, 2],
-          'line-offset': 4,
         },
-      },
-      {
-        id: 'lines-highlight',
-        type: 'line',
-        source: 'highlight',
-        layout: { 'line-cap': 'round' },
-        paint: { 'line-color': c.highlight, 'line-width': 6 },
       },
       {
         id: 'lines-cancelled',
@@ -373,6 +376,7 @@ export function MapView({
   stops,
   legs,
   highlightLegIds,
+  boats,
   cancelledLegIds,
   config,
   onStopClick,
@@ -519,6 +523,26 @@ export function MapView({
     return () => markers.forEach((m) => m.remove());
   }, [atolls, fallback, mapReady]);
 
+  // Boat markers at each boarding stop of the shown route.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (fallback || !map || !boats?.length) return;
+    const byId = new Map(stops.map((s) => [s.id, s]));
+    const markers = boats.flatMap((b) => {
+      const s = byId.get(b.stopId);
+      if (!s) return [];
+      const el = document.createElement('span');
+      el.className = `map-boat${b.official ? '' : ' inferred'}`;
+      el.textContent = `\u26F4 ${b.label}`;
+      return [
+        new Marker({ element: el, anchor: 'bottom', offset: [0, -8] })
+          .setLngLat([s.lon, s.lat])
+          .addTo(map),
+      ];
+    });
+    return () => markers.forEach((m) => m.remove());
+  }, [boats, stops, fallback, mapReady]);
+
   // Names as HTML labels, since the style has no glyphs for symbol layers.
   useEffect(() => {
     const map = mapRef.current;
@@ -566,7 +590,7 @@ export function MapView({
   return (
     <div className="map-view">
       {fallback ? (
-        <SvgMap stops={stops} segments={segments} onStopClick={onStopClick} />
+        <SvgMap stops={stops} segments={segments} boats={boats} onStopClick={onStopClick} />
       ) : (
         <>
           <div ref={containerRef} className="map-canvas" role="region" aria-label={MAP_LABEL} />
@@ -600,13 +624,14 @@ function applyData(map: MlMap, stops: Stop[], segments: MapSegments) {
 type SvgMapProps = {
   stops: Stop[];
   segments: MapSegments;
+  boats?: BoatMarker[];
   onStopClick?: (stopId: string) => void;
 };
 
 const SVG_W = 1000;
 const SVG_PAD = 60;
 
-export function SvgMap({ stops, segments, onStopClick }: SvgMapProps) {
+export function SvgMap({ stops, segments, boats, onStopClick }: SvgMapProps) {
   const proj = useMemo(() => {
     if (stops.length === 0) return null;
     const lats = stops.map((s) => s.lat);
@@ -672,12 +697,12 @@ export function SvgMap({ stops, segments, onStopClick }: SvgMapProps) {
     >
       <title id="map-svg-title">{`${MAP_LABEL} (simplified view, WebGL unavailable)`}</title>
       <rect width={proj.w} height={proj.h} className="map-svg-bg" />
+      <g opacity={0.35}>{segments.highlight.map((s) => line(s, '--map-highlight', 12))}</g>
       <g>
         {segments.base.map((s) =>
-          s.official ? line(s, '--map-official', 3) : line(s, '--map-inferred', 3, '10 7', 6),
+          s.official ? line(s, '--map-official', 3) : line(s, '--map-inferred', 3, '10 7'),
         )}
       </g>
-      <g>{segments.highlight.map((s) => line(s, '--map-highlight', 8))}</g>
       <g>{segments.cancelled.map((s) => line(s, '--map-cancelled', 5, '6 5'))}</g>
       <g>
         {stops.map((s) => (
@@ -714,6 +739,24 @@ export function SvgMap({ stops, segments, onStopClick }: SvgMapProps) {
             </text>
           </g>
         ))}
+      </g>
+      <g>
+        {(boats ?? []).flatMap((b) => {
+          const s = stops.find((x) => x.id === b.stopId);
+          return s
+            ? [
+                <text
+                  key={`${b.stopId}-${b.label}`}
+                  x={proj.x(s.lon)}
+                  y={proj.y(s.lat) - 16}
+                  textAnchor="middle"
+                  className={`map-svg-boat${b.official ? '' : ' inferred'}`}
+                >
+                  {`\u26F4 ${b.label}`}
+                </text>,
+              ]
+            : [];
+        })}
       </g>
     </svg>
   );

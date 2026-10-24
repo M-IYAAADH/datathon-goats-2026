@@ -84,3 +84,32 @@
 .map-view .maplibregl-ctrl-attrib.maplibregl-compact-show {
   visibility: inherit;
 }
+
+.map-boat {
+  font: 600 11px var(--font-sans);
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1.5px solid var(--map-official);
+  background: var(--map-halo);
+  color: var(--map-stop);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.map-boat.inferred {
+  border-style: dashed;
+  border-color: var(--map-inferred);
+}
+
+.map-svg-boat {
+  font-size: 20px;
+  font-weight: 600;
+  fill: var(--map-official);
+  paint-order: stroke;
+  stroke: var(--map-halo);
+  stroke-width: 4px;
+}
+
+.map-svg-boat.inferred {
+  fill: var(--map-inferred);
+}

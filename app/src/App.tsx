@@ -4,10 +4,11 @@ import { DisruptionPanel, type Scenario } from './components/DisruptionPanel';
 import { Header } from './components/Header';
 import { HowItWorks } from './components/HowItWorks';
 import { JourneyList } from './components/JourneyList';
-import { MapView } from './components/MapView';
+import { formatRange, type AltRoute } from './components/JourneyTimeline';
+import { MapView, type BoatMarker } from './components/MapView';
 import { PlannerForm } from './components/PlannerForm';
 import { loadBundle, type Bundle, type Leg, type Stop } from './data/load';
-import { findJourneys, type Journey, type JourneyQuery } from './data/planner';
+import { findJourneys, type Journey, type JourneyQuery, type Ride } from './data/planner';
 import { useTheme } from './hooks/useTheme';
 import './App.css';
 
@@ -25,6 +26,7 @@ const NO_STOPS: Stop[] = [];
 const NO_LEGS: Leg[] = [];
 const NO_JOURNEYS: Journey[] = [];
 const NO_IDS: string[] = [];
+const NO_RIDES: Ride[] = [];
 
 type Tab = 'plan' | 'disruption' | 'about';
 
@@ -40,6 +42,7 @@ export function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [results, setResults] = useState<Journey[] | null>(null);
   const [scenario, setScenario] = useState<Scenario | null>(null);
+  const [alt, setAlt] = useState<AltRoute | null>(null);
   const [tab, setTab] = useState<Tab>('plan');
   const { theme, toggle } = useTheme();
 
@@ -61,16 +64,41 @@ export function App() {
   function handleSubmit(q: JourneyQuery) {
     if (!ready) return;
     setQuery(q);
+    setAlt(null);
     const found = findJourneys(ready, q);
     setResults(found);
     setSelectedId(found[0]?.id ?? null);
   }
 
-  // During a simulated cancellation the map shows the new best route instead of the selection.
-  const highlightLegIds = useMemo(() => {
-    const sel = scenario ? scenario.result.newBest : results?.find((j) => j.id === selectedId);
-    return sel ? sel.rides.flatMap((r) => r.occurrences.map((o) => o.leg.id)) : NO_IDS;
-  }, [results, selectedId, scenario]);
+  function selectJourney(id: string) {
+    setSelectedId(id);
+    setAlt(null);
+  }
+
+  // The map draws only this route. A simulated cancellation shows the private-boat
+  // recovery (or the new best route), a chosen wait alternative shows that, else the selection.
+  const shownRides = useMemo(() => {
+    if (scenario) {
+      const j = scenario.result.recovery[0] ?? scenario.result.newBest;
+      return j?.rides ?? NO_RIDES;
+    }
+    return alt?.rides ?? results?.find((j) => j.id === selectedId)?.rides ?? NO_RIDES;
+  }, [results, selectedId, scenario, alt]);
+
+  const highlightLegIds = useMemo(
+    () => shownRides.flatMap((r) => r.occurrences.map((o) => o.leg.id)),
+    [shownRides],
+  );
+
+  const boats = useMemo<BoatMarker[]>(
+    () =>
+      shownRides.map((r) => ({
+        stopId: r.from,
+        label: `${r.source === 'mtcc' ? 'MTCC' : 'Inferred'} ${formatRange(r.dep)}`,
+        official: r.source === 'mtcc',
+      })),
+    [shownRides],
+  );
 
   const cancelledLegIds = useMemo(
     () => (scenario ? [scenario.cancelled.leg.id] : NO_IDS),
@@ -141,7 +169,9 @@ export function App() {
                     bundle={ready}
                     query={query}
                     selectedId={selectedId}
-                    onSelect={setSelectedId}
+                    onSelect={selectJourney}
+                    shownAlt={alt?.key ?? null}
+                    onShowAlt={setAlt}
                   />
                 ) : (
                   <p className="placeholder">Results appear here after you plan a journey.</p>
@@ -180,6 +210,7 @@ export function App() {
               legs={ready?.legs ?? NO_LEGS}
               config={ready?.config}
               highlightLegIds={highlightLegIds}
+              boats={boats}
               cancelledLegIds={cancelledLegIds}
             />
           </div>

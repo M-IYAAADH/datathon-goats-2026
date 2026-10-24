@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { Bundle } from '../data/load';
 import type { Journey, Query } from '../data/planner';
-import { JourneyTimeline, formatMinutes, formatRange } from './JourneyTimeline';
+import { JourneyTimeline, formatMinutes, formatRange, type AltRoute } from './JourneyTimeline';
 import './JourneyList.css';
 
 type Props = {
@@ -11,6 +11,8 @@ type Props = {
   query: Query | null;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  shownAlt: string | null;
+  onShowAlt: (alt: AltRoute | null) => void;
 };
 
 const ARROW = '→';
@@ -49,7 +51,16 @@ function EmptyIcon() {
   );
 }
 
-export function JourneyList({ journeys, searched, bundle, query, selectedId, onSelect }: Props) {
+export function JourneyList({
+  journeys,
+  searched,
+  bundle,
+  query,
+  selectedId,
+  onSelect,
+  shownAlt,
+  onShowAlt,
+}: Props) {
   const names = useMemo(() => new Map(bundle.stops.map((s) => [s.id, s.name])), [bundle.stops]);
   const name = (id: string) => names.get(id) ?? id;
 
@@ -117,7 +128,15 @@ export function JourneyList({ journeys, searched, bundle, query, selectedId, onS
               </span>
             </button>
             <div id={panelId} className="journey-detail" hidden={!selected}>
-              {selected && query && <JourneyTimeline journey={j} bundle={bundle} query={query} />}
+              {selected && query && (
+                <JourneyTimeline
+                  journey={j}
+                  bundle={bundle}
+                  query={query}
+                  shownAlt={shownAlt}
+                  onShowAlt={onShowAlt}
+                />
+              )}
             </div>
           </li>
         );
