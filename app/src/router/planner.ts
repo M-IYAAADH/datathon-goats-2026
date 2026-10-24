@@ -1,6 +1,8 @@
 // Journey search, SRS section 6 steps 1 and 2.
 import { assessTransfer } from './connections';
-import type { Bundle, Config, Journey, Leg, Occurrence, Query, Ride, Transfer } from './model';
+import type {
+  Bundle, Config, Journey, Leg, Occurrence, Query, Ride, Transfer, WaitAlternative, WaitAlternativesResult,
+} from './model';
 import { expandOccurrences } from './time';
 
 const MAX_RESULTS = 3;
@@ -97,4 +99,31 @@ export function findJourneys(
   return [...found.values()]
     .sort((a, b) => a.arr.max - b.arr.max || b.dep.min - a.dep.min || a.transfers.length - b.transfers.length)
     .slice(0, MAX_RESULTS);
+}
+
+// ---------- Wait alternatives (SRS 5.4) ----------
+
+/**
+ * Other ways on from the island of `journey.transfers[transferIndex]` that reach
+ * the destination certainly earlier. Empty alternatives = "No alternative found in the data".
+ */
+export function findWaitAlternatives(
+  bundle: Bundle,
+  query: Query,
+  journey: Journey,
+  transferIndex: number,
+  occurrences = expandOccurrences(bundle.legs, query.date, bundle.config.horizonHours),
+): WaitAlternativesResult {
+  const t = journey.transfers[transferIndex];
+  const before = journey.rides[t.fromRide].occurrences;
+  const arriving = before[before.length - 1];
+  const onward = findJourneys(bundle, { ...query, origin: t.stop, earliestDep: arriving.arr.min }, occurrences);
+  const alternatives = onward
+    .filter((alt) => assessTransfer(arriving, alt.rides[0].occurrences[0], bundle.config).status !== 'missed')
+    .map((alt): WaitAlternative => ({
+      journey: alt,
+      savingMin: [journey.arr.min - alt.arr.max, journey.arr.max - alt.arr.min],
+    }))
+    .filter((a) => a.savingMin[0] > 0);
+  return { journeyId: journey.id, transferIndex, stop: t.stop, alternatives };
 }

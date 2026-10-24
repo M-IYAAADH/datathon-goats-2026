@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fixture } from './fixture';
 import type { Journey, Query } from './model';
-import { findJourneys } from './planner';
+import { findJourneys, findWaitAlternatives } from './planner';
 
 const q = (origin: string, date: string, earliestDep = 0): Query => ({ origin, destination: 'MALE', date, earliestDep });
 const official = (js: Journey[]) => js.find((j) => !j.usesInferred);
@@ -42,5 +42,23 @@ describe('findJourneys', () => {
 
   it('respects earliest departure', () => {
     expect(findJourneys(fixture, q('MAAFUSHI', '2026-10-24', 450))).toEqual([]);
+  });
+});
+
+describe('findWaitAlternatives', () => {
+  it('T8 the 3 h 20 min wait at Rasdhoo gets an inferred alternative with a saving range', () => {
+    const query = q('THODDOO', '2026-10-25');
+    const j = official(findJourneys(fixture, query))!;
+    const r = findWaitAlternatives(fixture, query, j, 0);
+    expect(r.stop).toBe('RASDHOO');
+    expect(r.alternatives.map((a) => [a.journey.rides[0].tripId, a.savingMin])).toEqual([['inf-ras-mle-1110', [60, 90]]]);
+  });
+
+  it('returns no alternatives when nothing reaches the destination earlier', () => {
+    const query = q('THODDOO', '2026-10-25');
+    const legs = fixture.legs.filter((l) => l.source === 'mtcc');
+    const bundle = { ...fixture, legs };
+    const j = findJourneys(bundle, query)[0];
+    expect(findWaitAlternatives(bundle, query, j, 0).alternatives).toEqual([]);
   });
 });
