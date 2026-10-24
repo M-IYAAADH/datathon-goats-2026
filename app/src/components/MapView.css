@@ -24,7 +24,8 @@
 
 .map-svg-label {
   font-size: 22px;
-  fill: var(--color-text);
+  font-weight: 600;
+  fill: var(--map-stop);
   paint-order: stroke;
   stroke: var(--map-halo);
   stroke-width: 4px;
@@ -44,9 +45,8 @@
 }
 
 .map-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text);
+  font: 600 11px var(--font-sans);
+  color: var(--map-stop);
   text-shadow:
     0 0 2px var(--map-halo),
     0 0 2px var(--map-halo),

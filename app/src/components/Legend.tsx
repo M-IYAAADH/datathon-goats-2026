@@ -28,20 +28,18 @@ export function Legend() {
   }, []);
 
   return (
-    <details
-      className="map-legend card"
-      open={open}
-      onToggle={(e) => setOpen(e.currentTarget.open)}
-    >
-      <summary>Legend</summary>
+    <details className="map-legend" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary>
+        <b>Legend</b>
+      </summary>
       <ul aria-label="Map legend">
         {ITEMS.map((item) => (
           <li key={item.label}>
-            <svg width="28" height="10" aria-hidden="true" focusable="false">
+            <svg width="20" height="10" aria-hidden="true" focusable="false">
               <line
                 x1="1"
                 y1="5"
-                x2="27"
+                x2="19"
                 y2="5"
                 style={{ stroke: `var(${item.token})` }}
                 strokeWidth={item.width}
