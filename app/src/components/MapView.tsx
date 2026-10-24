@@ -54,7 +54,10 @@ function dedupe(legs: Leg[], byId: Map<string, Stop>): Segment[] {
   const out = new Map<string, Segment>();
   for (const leg of legs) {
     if (leg.from === leg.to) continue;
-    const [a, b] = leg.from < leg.to ? [byId.get(leg.from), byId.get(leg.to)] : [byId.get(leg.to), byId.get(leg.from)];
+    const [a, b] =
+      leg.from < leg.to
+        ? [byId.get(leg.from), byId.get(leg.to)]
+        : [byId.get(leg.to), byId.get(leg.from)];
     if (!a || !b) continue;
     const official = leg.source === 'mtcc';
     const key = `${pairKey(a.id, b.id)}|${leg.source}`;
@@ -74,9 +77,18 @@ export function buildSegments(
   const hi = new Set(highlightLegIds);
   const cx = new Set(cancelledLegIds);
   return {
-    base: dedupe(legs.filter((l) => inferredVisible(l, config)), byId),
-    highlight: dedupe(legs.filter((l) => hi.has(l.id)), byId),
-    cancelled: dedupe(legs.filter((l) => cx.has(l.id)), byId),
+    base: dedupe(
+      legs.filter((l) => inferredVisible(l, config)),
+      byId,
+    ),
+    highlight: dedupe(
+      legs.filter((l) => hi.has(l.id)),
+      byId,
+    ),
+    cancelled: dedupe(
+      legs.filter((l) => cx.has(l.id)),
+      byId,
+    ),
   };
 }
 
@@ -133,7 +145,7 @@ const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
 // Plain background only: no tiles, no glyphs, no sprites, so nothing is fetched.
 function buildStyle(c: MapColors): Exclude<MapOptions['style'], string | undefined> {
   return {
-  version: 8,
+    version: 8,
     sources: {
       lines: { type: 'geojson', data: EMPTY },
       highlight: { type: 'geojson', data: EMPTY },
@@ -186,7 +198,7 @@ function buildStyle(c: MapColors): Exclude<MapOptions['style'], string | undefin
         },
       },
     ],
-    };
+  };
 }
 
 function applyColors(map: MlMap, c: MapColors) {

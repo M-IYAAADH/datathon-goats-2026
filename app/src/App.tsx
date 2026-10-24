@@ -66,7 +66,9 @@ export function App() {
           {HONESTY_TEXT}
         </Banner>
         {state.status === 'loading' && (
-          <p className="load-status" role="status">Loading data…</p>
+          <p className="load-status" role="status">
+            Loading data…
+          </p>
         )}
         {state.status === 'error' && (
           <p className="load-error" role="alert">
@@ -85,7 +87,9 @@ export function App() {
               <PlannerForm stops={ready.stops} onSubmit={handleSubmit} />
             ) : (
               <p className="placeholder">
-                {state.status === 'loading' ? 'Planner available once data has loaded.' : 'Planner unavailable.'}
+                {state.status === 'loading'
+                  ? 'Planner available once data has loaded.'
+                  : 'Planner unavailable.'}
               </p>
             )}
           </div>

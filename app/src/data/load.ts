@@ -80,7 +80,13 @@ export type Bundle = {
   meta: Meta;
 };
 
-export const BUNDLE_FILES = ['stops.json', 'legs.json', 'config.json', 'census.json', 'meta.json'] as const;
+export const BUNDLE_FILES = [
+  'stops.json',
+  'legs.json',
+  'config.json',
+  'census.json',
+  'meta.json',
+] as const;
 
 export type BundleFile = (typeof BUNDLE_FILES)[number];
 
@@ -151,7 +157,9 @@ function checker(file: string) {
   const num = (o: Obj, key: string, path: string): number => {
     const v = o[key];
     if (v === undefined) fail(join(path, key), 'missing');
-    return typeof v === 'number' && Number.isFinite(v) ? v : fail(join(path, key), 'expected a number');
+    return typeof v === 'number' && Number.isFinite(v)
+      ? v
+      : fail(join(path, key), 'expected a number');
   };
   const int = (o: Obj, key: string, path: string): number => {
     const v = num(o, key, path);
@@ -166,7 +174,10 @@ function checker(file: string) {
     const v = o[key] as T;
     if (allowed.includes(v)) return v;
     const list = allowed.map((a) => (a === null ? 'null' : `'${String(a)}'`)).join(', ');
-    return fail(join(path, key), o[key] === undefined ? `missing (expected one of ${list})` : `expected one of ${list}`);
+    return fail(
+      join(path, key),
+      o[key] === undefined ? `missing (expected one of ${list})` : `expected one of ${list}`,
+    );
   };
   return { fail, obj, str, nonEmpty, num, int, bool, oneOf };
 }
@@ -197,7 +208,12 @@ function validateStops(raw: unknown): Stop[] {
   return stops as Stop[];
 }
 
-function validateRange(c: ReturnType<typeof checker>, o: Obj, key: string, path: string): TimeRange {
+function validateRange(
+  c: ReturnType<typeof checker>,
+  o: Obj,
+  key: string,
+  path: string,
+): TimeRange {
   const p = join(path, key);
   if (o[key] === undefined) c.fail(p, 'missing');
   const r = c.obj(o[key], p);
@@ -214,7 +230,11 @@ function validateEvidence(c: ReturnType<typeof checker>, v: unknown, p: string):
   c.int(e, 'days', p);
   const w = e.weekdayObs;
   if (w === undefined) c.fail(`${p}.weekdayObs`, 'missing');
-  if (!Array.isArray(w) || w.length !== 7 || !w.every((n) => typeof n === 'number' && Number.isFinite(n))) {
+  if (
+    !Array.isArray(w) ||
+    w.length !== 7 ||
+    !w.every((n) => typeof n === 'number' && Number.isFinite(n))
+  ) {
     c.fail(`${p}.weekdayObs`, 'expected an array of 7 numbers (Sunday to Saturday)');
   }
   c.str(e, 'period', p);
@@ -245,13 +265,16 @@ function validateLegs(raw: unknown, stopIds: Set<string>): Leg[] {
     const arr = validateRange(c, l, 'arr', p);
     if (arr.min < dep.min || arr.max < dep.max) c.fail(`${p}.arr`, 'arrival is before departure');
     if (source === 'mtcc') {
-      if (dep.min !== dep.max) c.fail(`${p}.dep`, 'official (mtcc) times must have min equal to max');
-      if (arr.min !== arr.max) c.fail(`${p}.arr`, 'official (mtcc) times must have min equal to max');
+      if (dep.min !== dep.max)
+        c.fail(`${p}.dep`, 'official (mtcc) times must have min equal to max');
+      if (arr.min !== arr.max)
+        c.fail(`${p}.arr`, 'official (mtcc) times must have min equal to max');
     }
 
     const days = l.days;
     if (days === undefined) c.fail(`${p}.days`, 'missing');
-    if (!Array.isArray(days)) c.fail(`${p}.days`, 'expected an array of weekdays (0 = Sunday to 6 = Saturday)');
+    if (!Array.isArray(days))
+      c.fail(`${p}.days`, 'expected an array of weekdays (0 = Sunday to 6 = Saturday)');
     (days as unknown[]).forEach((d, j) => {
       if (typeof d !== 'number' || !Number.isInteger(d) || d < 0 || d > 6) {
         c.fail(`${p}.days[${j}]`, 'expected a weekday from 0 (Sunday) to 6 (Saturday)');
@@ -268,7 +291,8 @@ function validateLegs(raw: unknown, stopIds: Set<string>): Leg[] {
     c.oneOf(l, 'cls', p, ['fast', 'slow', null] as const);
 
     if (source === 'inferred') {
-      if (l.evidence === undefined || l.evidence === null) c.fail(`${p}.evidence`, 'missing (required for inferred legs)');
+      if (l.evidence === undefined || l.evidence === null)
+        c.fail(`${p}.evidence`, 'missing (required for inferred legs)');
       validateEvidence(c, l.evidence, `${p}.evidence`);
     } else if (l.evidence !== undefined && l.evidence !== null) {
       validateEvidence(c, l.evidence, `${p}.evidence`);
@@ -310,12 +334,21 @@ function validateMeta(raw: unknown): Meta {
   return o as Meta;
 }
 
-function checkBuildVersion(file: string, raw: unknown, expected: string, stringOnly: boolean): void {
+function checkBuildVersion(
+  file: string,
+  raw: unknown,
+  expected: string,
+  stringOnly: boolean,
+): void {
   if (!isObj(raw) || !('buildVersion' in raw)) return;
   const v = raw.buildVersion;
   if (stringOnly && typeof v !== 'string') return;
   if (v !== expected) {
-    throw new BundleError(file, 'buildVersion', `'${String(v)}' does not match meta.json buildVersion '${expected}'`);
+    throw new BundleError(
+      file,
+      'buildVersion',
+      `'${String(v)}' does not match meta.json buildVersion '${expected}'`,
+    );
   }
 }
 
@@ -342,7 +375,11 @@ async function fetchFile(base: string, file: BundleFile): Promise<unknown> {
   try {
     res = await fetch(`${base}data/${file}`);
   } catch (e) {
-    throw new BundleError(file, '', `could not fetch (${e instanceof Error ? e.message : String(e)})`);
+    throw new BundleError(
+      file,
+      '',
+      `could not fetch (${e instanceof Error ? e.message : String(e)})`,
+    );
   }
   if (!res.ok) throw new BundleError(file, '', `HTTP ${res.status}`);
   try {

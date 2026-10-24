@@ -16,9 +16,13 @@ npm run dev       # Vite dev server
 npm test          # Vitest, runs src/**/*.test.ts in Node
 npm run build     # tsc type check, then vite build
 npm run preview   # serve the production build
+npm run lint      # ESLint (typescript-eslint, react-hooks, jsx-a11y)
+npm run format    # Prettier (format:check to verify)
 ```
 
-Run `npm test` and `npm run build` before calling any change done.
+Run `npm test`, `npm run build`, `npm run lint` and `npm run format:check` before calling any change done. TypeScript is pinned to 6.0 because typescript-eslint does not support TS 7 yet.
+
+UI conventions are in `docs/ui-revamp-plan.md`: colours and spacing come only from tokens in `src/styles/tokens.css` (light and dark), shared controls from `src/styles/ui.css`, each component imports its own CSS file, CSS is mobile first (`min-width: 768px` for desktop), and status is never shown by colour alone.
 
 ## Layout
 

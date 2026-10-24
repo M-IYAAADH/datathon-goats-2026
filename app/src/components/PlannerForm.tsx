@@ -13,7 +13,12 @@ type Props = {
 const DEFAULT_DATE = '2026-10-25';
 const DEFAULT_TIME = '06:00';
 
-export function PlannerForm({ stops, defaultDate = DEFAULT_DATE, onSubmit, disabled = false }: Props) {
+export function PlannerForm({
+  stops,
+  defaultDate = DEFAULT_DATE,
+  onSubmit,
+  disabled = false,
+}: Props) {
   const uid = useId();
   const ids = {
     origin: `${uid}-origin`,
@@ -29,10 +34,7 @@ export function PlannerForm({ stops, defaultDate = DEFAULT_DATE, onSubmit, disab
   const [time, setTime] = useState(DEFAULT_TIME);
   const [error, setError] = useState<string | null>(null);
 
-  const sorted = useMemo(
-    () => [...stops].sort((a, b) => a.name.localeCompare(b.name)),
-    [stops],
-  );
+  const sorted = useMemo(() => [...stops].sort((a, b) => a.name.localeCompare(b.name)), [stops]);
 
   function swap() {
     setOrigin(destination);
@@ -72,7 +74,9 @@ export function PlannerForm({ stops, defaultDate = DEFAULT_DATE, onSubmit, disab
   return (
     <form className="planner-form" onSubmit={handleSubmit} noValidate>
       <div className="field planner-origin">
-        <label className="field-label" htmlFor={ids.origin}>Origin</label>
+        <label className="field-label" htmlFor={ids.origin}>
+          Origin
+        </label>
         <select
           id={ids.origin}
           className="select"
@@ -113,7 +117,9 @@ export function PlannerForm({ stops, defaultDate = DEFAULT_DATE, onSubmit, disab
       </div>
 
       <div className="field planner-destination">
-        <label className="field-label" htmlFor={ids.destination}>Destination</label>
+        <label className="field-label" htmlFor={ids.destination}>
+          Destination
+        </label>
         <select
           id={ids.destination}
           className="select"
@@ -128,7 +134,9 @@ export function PlannerForm({ stops, defaultDate = DEFAULT_DATE, onSubmit, disab
       </div>
 
       <div className="field planner-date">
-        <label className="field-label" htmlFor={ids.date}>Date</label>
+        <label className="field-label" htmlFor={ids.date}>
+          Date
+        </label>
         <input
           id={ids.date}
           className="input"
@@ -140,7 +148,9 @@ export function PlannerForm({ stops, defaultDate = DEFAULT_DATE, onSubmit, disab
       </div>
 
       <div className="field planner-time">
-        <label className="field-label" htmlFor={ids.time}>Earliest departure</label>
+        <label className="field-label" htmlFor={ids.time}>
+          Earliest departure
+        </label>
         <input
           id={ids.time}
           className="input"

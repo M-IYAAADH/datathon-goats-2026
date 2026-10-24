@@ -6,6 +6,8 @@ import census from '../../public/data/census.json';
 import meta from '../../public/data/meta.json';
 import { BundleError, validateBundle } from './load';
 
+// Tests mutate the sample into deliberately invalid shapes, so the raw input is untyped.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Raw = { stops: any; legs: any; config: any; census: any; meta: any };
 
 const sample = (): Raw => structuredClone({ stops, legs, config, census, meta });
