@@ -1,0 +1,3 @@
+{ "buildVersion": "2026-10-24T15:00-sample", "fixture": true, "evidencePeriod": "2025-08",
+  "timezoneStatus": "unconfirmed", "speedUnitStatus": "unconfirmed",
+  "clockCorrections": 0, "timetableYear": 2026 }

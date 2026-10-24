@@ -1,0 +1,98 @@
+/* Mobile first: one panel at a time, both kept in layout; desktop shows both side by side. */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.banners {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+}
+
+.load-status,
+.load-error {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.load-status {
+  color: var(--color-text-muted);
+}
+
+.load-error {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+}
+
+.layout {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-2) var(--space-2)
+    calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + var(--space-2));
+}
+
+.panel-plan {
+  overflow-y: auto;
+}
+
+.panel-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.region {
+  flex: none;
+  padding: var(--space-4);
+  min-width: 0;
+}
+
+.region-map {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.placeholder {
+  color: var(--color-text-subtle);
+}
+
+@media (min-width: 768px) {
+  .banners {
+    padding: var(--space-3) var(--space-6) 0;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 420px minmax(0, 1fr);
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-6) var(--space-6);
+  }
+
+  .panel {
+    position: static;
+    padding: 0;
+    min-height: 0;
+  }
+
+  .panel-hidden {
+    visibility: visible;
+    pointer-events: auto;
+  }
+}

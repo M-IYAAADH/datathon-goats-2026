@@ -1,0 +1,56 @@
+.map-view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-canvas {
+  flex: 1;
+  min-height: 0;
+}
+
+.map-svg {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.map-svg-bg {
+  fill: var(--map-water);
+}
+
+.map-svg-label {
+  font-size: 22px;
+  fill: var(--color-text);
+  paint-order: stroke;
+  stroke: var(--map-halo);
+  stroke-width: 4px;
+}
+
+.map-svg-stop.clickable {
+  cursor: pointer;
+}
+
+.map-svg-stop:focus-visible {
+  outline: none;
+}
+
+.map-svg-stop:focus-visible circle {
+  stroke: var(--color-text);
+  stroke-width: 4px;
+}
+
+.map-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  text-shadow:
+    0 0 2px var(--map-halo),
+    0 0 2px var(--map-halo),
+    0 0 3px var(--map-halo);
+  white-space: nowrap;
+  pointer-events: none;
+}

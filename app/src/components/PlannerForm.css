@@ -1,0 +1,62 @@
+.planner-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.planner-origin,
+.planner-swap,
+.planner-destination,
+.planner-submit,
+.form-error {
+  grid-column: 1 / -1;
+}
+
+.planner-swap {
+  display: flex;
+  justify-content: center;
+}
+
+/* The arrows icon is drawn horizontal; rotate it when the fields are stacked. */
+.planner-swap-btn svg {
+  transform: rotate(90deg);
+}
+
+.planner-submit {
+  width: 100%;
+}
+
+.form-error {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}
+
+@media (min-width: 768px) {
+  .planner-form {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: end;
+  }
+
+  .planner-origin,
+  .planner-swap,
+  .planner-destination {
+    grid-column: auto;
+  }
+
+  .planner-date {
+    grid-column: 1;
+  }
+
+  .planner-time {
+    grid-column: 3;
+  }
+
+  .planner-swap-btn svg {
+    transform: none;
+  }
+}

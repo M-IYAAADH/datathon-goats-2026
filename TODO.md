@@ -33,7 +33,7 @@ If you finish your lane, take any open task. Ask in the group chat before taking
 |---|---|---|---|---|
 | [x] 14:45 | X0 | Scaffold Vite + React + TypeScript app, add `maplibre-gl` and `vitest`, scripts `dev`, `build`, `test`, `preview` | `app/package.json`, `app/tsconfig.json`, `app/vite.config.ts`, `app/index.html`, `app/src/main.tsx` | `npm install && npm run dev` shows a blank page, `npm test` runs |
 | [x] Member A 15:09 | R1 | Types: write `app/src/router/model.ts` from SRS section 4 (`Stop`, `Leg`, `Config`, `Census`, `Meta`, `Bundle`, `Occurrence`, `Journey`, `TransferAssessment`, `ScenarioResult`) | `app/src/router/model.ts` | Compiles. Post "model.ts is in" in the group chat. UI starts using it |
-| [ ] | X1 | Sample data: five JSON files in the exact contract shape with `meta.fixture: true`. Include the demo islands (Mathiveri, Bodufolhudhoo, Ukulhas, Rasdhoo, Thoddoo, Maafushi, Gulhi, Malé), the official legs from SRS T7, T8, T9, and two clearly fake inferred legs (Rasdhoo to Malé 11:10 to 11:30 and 12:20 to 12:50, `cls: "fast"`) | `app/public/data/*.json` | Files validate against `model.ts`. T7, T8, T9 scenarios are possible with them |
+| [x] Member B 15:37 | X1 | Sample data: five JSON files in the exact contract shape with `meta.fixture: true`. Include the demo islands (Mathiveri, Bodufolhudhoo, Ukulhas, Rasdhoo, Thoddoo, Maafushi, Gulhi, Malé), the official legs from SRS T7, T8, T9, and two clearly fake inferred legs (Rasdhoo to Malé 11:10 to 11:30 and 12:20 to 12:50, `cls: "fast"`) | `app/public/data/*.json` | Files validate against `model.ts`. T7, T8, T9 scenarios are possible with them |
 
 ## 1. Router lane (Member A)
 
@@ -52,14 +52,24 @@ If you finish your lane, take any open task. Ask in the group chat before taking
 
 | Status | ID | Task | Files | Needs | Done when |
 |---|---|---|---|---|---|
-| [ ] | U1 | Data loader: `loadBundle()` fetches the five files; `validateBundle()` checks required fields, stop references, `arr` after `dep`, one `buildVersion` across files. Clear error message naming file and field | `src/data/load.ts` | R1, X1 | Breaking a field in a JSON shows the message, not a blank page |
-| [ ] | U2 | Layout and banners: header, left panel (form/results), right panel (map). Persistent honesty banner (SRS FR-23). "SAMPLE DATA" banner when `meta.fixture` is true | `src/App.tsx`, `src/components/Banner.tsx`, `src/styles.css` | X0, U1 | Both banners visible; layout holds at 390 px wide |
-| [ ] | U3 | Planner form: origin, destination, date (default Sun 25 Oct 2026), earliest departure; "Plan" button calls `findJourneys` | `src/components/PlannerForm.tsx` | U2, R4 | Entering Mathiveri to Malé lists journeys |
-| [ ] | U4 | Journey timeline: legs as rows with times (exact or range), wait bars between legs, labels Safe / Possible / Long wait (text and colour), official vs inferred, evidence text ("6 devices, 11 days"). Alternatives block under a long wait | `src/components/JourneyTimeline.tsx` | U3, R5 | Thoddoo to Malé shows the long wait and an alternative |
-| [ ] | U5 | Map: MapLibre with island points and lines, works with tiles blocked (plain background), SVG fallback if WebGL fails. Solid official, dashed inferred, selected journey highlighted | `src/components/MapView.tsx` | U2 | Map works with network offline; selecting a journey highlights it |
-| [ ] | U6 | Disruption panel: pick a dated official leg, "Cancel this leg (simulated)", before/after list, broken connections, recovery options, shift proposal card with the MTCC approval text, "Reset" button. Cancelled leg shown red on the map | `src/components/DisruptionPanel.tsx` | U4, U5, R6, R7 | Demo step 4 works end to end, Reset restores baseline |
+| [x] Member B 15:45 | U1 | Data loader: `loadBundle()` fetches the five files; `validateBundle()` checks required fields, stop references, `arr` after `dep`, one `buildVersion` across files. Clear error message naming file and field | `src/data/load.ts` | R1, X1 | Breaking a field in a JSON shows the message, not a blank page |
+| [x] Member B 15:36 | U2 | Layout and banners: header, left panel (form/results), right panel (map). Persistent honesty banner (SRS FR-23). "SAMPLE DATA" banner when `meta.fixture` is true | `src/App.tsx`, `src/components/Banner.tsx`, `src/styles.css` | X0, U1 | Both banners visible; layout holds at 390 px wide |
+| [x] Member B 16:13 | U3 | Planner form: origin, destination, date (default Sun 25 Oct 2026), earliest departure; "Plan" button calls `findJourneys` | `src/components/PlannerForm.tsx` | U2, R4 | Entering Mathiveri to Malé lists journeys |
+| [x] Member B 16:17 | U4 | Journey timeline: legs as rows with times (exact or range), wait bars between legs, labels Safe / Possible / Long wait (text and colour), official vs inferred, evidence text ("6 devices, 11 days"). Alternatives block under a long wait | `src/components/JourneyTimeline.tsx` | U3, R5 | Thoddoo to Malé shows the long wait and an alternative |
+| [x] Member B 15:40 | U5 | Map: MapLibre with island points and lines, works with tiles blocked (plain background), SVG fallback if WebGL fails. Solid official, dashed inferred, selected journey highlighted | `src/components/MapView.tsx` | U2 | Map works with network offline; selecting a journey highlights it |
+| [x] Member B 16:21 | U6 | Disruption panel: pick a dated official leg, "Cancel this leg (simulated)", before/after list, broken connections, recovery options, shift proposal card with the MTCC approval text, "Reset" button. Cancelled leg shown red on the map | `src/components/DisruptionPanel.tsx` | U4, U5, R6, R7 | Demo step 4 works end to end, Reset restores baseline |
 | [ ] | U7 | Polish: keyboard focus, labels not colour-only, empty states ("No journey found", "No alternative found in the data", "No safe shift"), "How this works" panel (FR-25) | all components | U6 | Tab through the whole demo flow with keyboard only |
 | [ ] | U8 (P2) | Census overlay on map: population and 65+ share on click; highlight islands that lose connection after a cancellation | `src/components/MapView.tsx`, `src/components/CensusCard.tsx` | U6 | Click an island shows numbers from `census.json` |
+
+### UI revamp (Member B, plan in docs/ui-revamp-plan.md)
+
+| Status | ID | Task | Files |
+|---|---|---|---|
+| [x] Member B 15:54 | UR0 | Foundation: theme tokens (light/dark), base, ui primitives, per-component CSS split | src/styles/*, component .css |
+| [x] Member B 15:57 | UR-A | Shell: header with theme toggle, banners, mobile Plan/Map tabs | App.tsx/.css, Header, Banner, MobileTabs, hooks/useTheme.ts |
+| [x] Member B 15:57 | UR-B | Planner form restyle and JourneyList | PlannerForm, JourneyList |
+| [x] Member B 15:57 | UR-C | Map theming, legend, keyboard-reachable stops | MapView, Legend |
+| [x] Member B 16:07 | UR-D | ESLint/Prettier tooling and How this works panel (FR-25) | package.json, eslint.config.js, .prettierrc, HowItWorks |
 
 ## 3. Data and docs lane (Lead)
 
@@ -93,3 +103,10 @@ If you finish your lane, take any open task. Ask in the group chat before taking
 
 - All npm commands run inside `app/` (`cd app`). The old single-file Leaflet prototype now lives in `prototype/index.html` for reference only; do not build on it. `tools/` holds the lead's data-build scripts.
 - Vitest runs `src/**/*.test.ts` in Node (no DOM) and passes when there are no test files yet.
+- X1 sample data notes (for Lead and Member A):
+  - Only `meta.json` has `buildVersion`. `stops.json` and `legs.json` are bare arrays, so the U1 "same buildVersion in all files" check has nothing to compare. Decide whether the contract should change.
+  - The sample inferred Rasdhoo to Malé boats (dep 11:10–11:30, 12:20–12:50) reach Malé before the MTCC 14:10. A router ranking by `arr.max` lists the inferred option first for T7 and T8.
+  - T12: the inferred 11:10–11:30 boat was moved to 11:05–11:30 so that, after cancelling Rasdhoo to Malé 11:00, the 10:55 arrival is Possible (not Safe) and the router proposes a 5-min-earlier MTCC shift. Covered by `src/data/demo.test.ts`.
+  - Route 308 (Thoddoo) and the 309 weekdays are made up. Kaafu census keys use a `K-` prefix.
+- U5: map shows a dashed, offset inferred line next to the official line on a pair both serve (Rasdhoo to Malé). Not yet checked visually in a browser or with WebGL off. Stop clicks work with a mouse only (keyboard comes in U7).
+- U1: the contract types live in `app/src/data/load.ts` until R1 lands. Member A: when you write `router/model.ts`, match these shapes (or tell Member B), and load.ts will re-export from model.ts.

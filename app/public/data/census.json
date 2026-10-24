@@ -1,0 +1,9 @@
+{
+  "AA-MATHIVERI":     { "name": "Mathiveri",     "population": 1150, "male": 590,  "female": 560,  "age0_17": 380,  "age18_64": 690,  "age65p": 80,  "disability": 35, "elderlyAlone": 9 },
+  "AA-BODUFOLHUDHOO": { "name": "Bodufolhudhoo", "population": 780,  "male": 400,  "female": 380,  "age0_17": 250,  "age18_64": 470,  "age65p": 60,  "disability": 22, "elderlyAlone": 7 },
+  "AA-UKULHAS":       { "name": "Ukulhas",       "population": 1050, "male": 540,  "female": 510,  "age0_17": 330,  "age18_64": 650,  "age65p": 70,  "disability": 30, "elderlyAlone": 8 },
+  "AA-RASDHOO":       { "name": "Rasdhoo",       "population": 1300, "male": 680,  "female": 620,  "age0_17": 400,  "age18_64": 810,  "age65p": 90,  "disability": 38, "elderlyAlone": 11 },
+  "AA-THODDOO":       { "name": "Thoddoo",       "population": 1800, "male": 930,  "female": 870,  "age0_17": 560,  "age18_64": 1110, "age65p": 130, "disability": 52, "elderlyAlone": 15 },
+  "K-MAAFUSHI":       { "name": "Maafushi",      "population": 2900, "male": 1520, "female": 1380, "age0_17": 880,  "age18_64": 1850, "age65p": 170, "disability": 80, "elderlyAlone": 18 },
+  "K-GULHI":          { "name": "Gulhi",         "population": 1000, "male": 520,  "female": 480,  "age0_17": 310,  "age18_64": 620,  "age65p": 70,  "disability": 28, "elderlyAlone": 6 }
+}

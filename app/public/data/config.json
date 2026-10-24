@@ -1,0 +1,3 @@
+{ "timezone": "Indian/Maldives", "bufferOfficialMin": 5, "bufferInferredMin": 15,
+  "longWaitMin": 120, "maxTransfers": 2, "horizonHours": 48,
+  "shiftStepMin": 5, "maxShiftMin": 30, "minDevices": 3, "minDays": 8 }
