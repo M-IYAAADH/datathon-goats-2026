@@ -5,34 +5,109 @@ import config from '../../public/data/config.json';
 import census from '../../public/data/census.json';
 import meta from '../../public/data/meta.json';
 import { validateBundle } from './load';
-import { applyCancellation, compareReachability, proposeShifts } from '../router/disruption';
+import { applyCancellation, compareReachability, MTCC_APPROVAL_NOTE, proposeShifts } from '../router/disruption';
+import { findJourneys } from '../router/planner';
 import { expandOccurrences } from '../router/time';
+import type { Connection } from '../router/model';
 
-// Demo step 4 on the sample bundle: cancel Rasdhoo to Malé 11:00, recover, propose a shift.
-describe('demo disruption on sample data', () => {
+// Demo on the real bundle: Thoddoo to Malé on Sunday 2026-10-25, then cancel Rasdhoo to Malé 11:00.
+describe('demo disruption on the real bundle', () => {
   const bundle = validateBundle({ stops, legs, config, census, meta });
-  const query = { origin: 'MATHIVERI', destination: 'MALE', date: '2026-10-25', earliestDep: 360 };
-  const cancelled = 'mtcc-301-4@2026-10-25';
+  const query = { origin: 'THODDOO', destination: 'MALE', date: '2026-10-25', earliestDep: 360 };
+  const DATE = query.date;
+  const toRas = `mtcc-cfn_2026_all:p28:b2:r01@${DATE}`; // route 303 Thoddoo 06:30 -> Rasdhoo 07:40
+  const rasMale = 'mtcc-cfn_2026_all:p28:b2:r04'; // route 303 Rasdhoo 11:00 -> Malé 14:10
+  const cancelled = `${rasMale}@${DATE}`;
+  const direct = `inf-sig_5422fd37e2_s08:1-3@${DATE}`;
+  const official = `${toRas}>${cancelled}`;
+  const baseline = () => expandOccurrences(bundle.legs, DATE, bundle.config.horizonHours);
 
-  it('recovers via an inferred boat and proposes an MTCC shift', () => {
+  it('the cancelled occurrence is route 303 Rasdhoo to Malé at 11:00', () => {
+    const leg = bundle.legs.find((l) => l.id === rasMale)!;
+    expect(leg).toMatchObject({ source: 'mtcc', routeId: '303', from: 'RASDHOO', to: 'MALE' });
+    expect(leg.dep).toEqual({ min: 660, max: 660 });
+    expect(leg.arr).toEqual({ min: 850, max: 850 });
+    expect(baseline().some((o) => o.id === cancelled)).toBe(true);
+  });
+
+  it('baseline: official change at Rasdhoo is a long wait; the inferred direct boat is offered', () => {
+    const journeys = findJourneys(bundle, query, baseline());
+    const off = journeys.find((j) => j.id === official)!;
+    expect(off).toBeDefined();
+    expect(off.dep).toEqual({ min: 390, max: 390 });
+    expect(off.arr).toEqual({ min: 850, max: 850 });
+    expect(off.transfers).toHaveLength(1);
+    const t = off.transfers[0];
+    expect(t.stop).toBe('RASDHOO');
+    expect(off.rides[0].arr).toEqual({ min: 460, max: 460 });
+    expect(t.assessment).toMatchObject({ status: 'safe', waitMin: [200, 200], long: true });
+
+    const inf = journeys.find((j) => j.id === direct)!;
+    expect(inf).toBeDefined();
+    expect(inf.usesInferred).toBe(true);
+    expect(inf.transfers).toHaveLength(0);
+    expect(inf.dep).toEqual({ min: 482, max: 489 });
+    expect(inf.arr).toEqual({ min: 552, max: 580 });
+    expect(inf.rides[0].occurrences[0].leg.evidence).toMatchObject({ devices: 8, days: 22 });
+    expect(journeys[0].id).toBe(direct);
+  });
+
+  it('cancelling Rasdhoo to Malé 11:00 loses the official journey, with no same-day inferred replacement', () => {
     const result = compareReachability(bundle, query, cancelled);
-    expect(result.lostJourneys.length).toBeGreaterThan(0);
-    const rec = result.recovery[0];
-    expect(rec).toBeDefined();
-    const t = rec.transfers[0];
-    expect(t.assessment.status).toBe('possible');
-    const arriving = rec.rides[t.fromRide].occurrences.at(-1)!;
-    const departing = rec.rides[t.toRide].occurrences[0];
-    const occs = applyCancellation(
-      expandOccurrences(bundle.legs, query.date, bundle.config.horizonHours),
-      cancelled,
+    expect(result.lostJourneys.map((j) => j.id)).toEqual([official]);
+    for (const j of result.after) expect(j.id.includes(cancelled)).toBe(false);
+    expect(result.brokenConnections.some((c) => c.arriving.id === toRas && c.departing.id === cancelled)).toBe(true);
+    expect(result.newBest?.id).toBe(direct);
+    expect(result.recovery.every((j) => j.usesInferred)).toBe(true);
+
+    // No inferred Rasdhoo -> Malé boat on the same day at or after 10:55.
+    const disrupted = applyCancellation(baseline(), cancelled);
+    const rasInf = disrupted.filter(
+      (o) => o.leg.source === 'inferred' && o.leg.from === 'RASDHOO' && o.leg.to === 'MALE' && o.serviceDate === DATE,
     );
-    const shifts = proposeShifts(bundle, occs, {
+    expect(rasInf.every((o) => o.dep.min < 655)).toBe(true);
+    expect(rasInf.map((o) => o.dep)).toEqual([{ min: 91, max: 100 }]);
+  });
+
+  it('shift proposals: none offered in the recovery, and any proposal is a bounded MTCC recommendation', () => {
+    const result = compareReachability(bundle, query, cancelled);
+    const disrupted = applyCancellation(baseline(), cancelled);
+    // DisruptionPanel only asks for shifts on non-Safe transfers fed by an MTCC ride in the recovery.
+    const targets = result.recovery.flatMap((j) =>
+      j.transfers.filter((t) => t.assessment.status !== 'safe' && j.rides[t.fromRide].source === 'mtcc'),
+    );
+    expect(targets).toEqual([]);
+
+    // The baseline Thoddoo -> Rasdhoo -> 11:00 connection is already Safe. Whether proposeShifts
+    // returns nothing for a Safe target or returns shifts that keep it Safe, these invariants hold.
+    const occs = baseline();
+    const off = findJourneys(bundle, query, occs).find((j) => j.id === official)!;
+    const t = off.transfers[0];
+    const target: Connection = {
       stop: t.stop,
-      arriving,
-      departing,
+      arriving: off.rides[t.fromRide].occurrences.at(-1)!,
+      departing: off.rides[t.toRide].occurrences[0],
       assessment: t.assessment,
-    });
-    expect(shifts.proposals[0]?.shiftMin).toBe(-5);
+    };
+    for (const shifts of [proposeShifts(bundle, occs, target), proposeShifts(bundle, disrupted, target)]) {
+      expect(shifts.rejected).toEqual([]);
+      for (const p of shifts.proposals) {
+        expect(p.occurrenceId).toBe(toRas);
+        expect(Math.abs(p.shiftMin) % bundle.config.shiftStepMin).toBe(0);
+        expect(p.shiftMin).not.toBe(0);
+        expect(Math.abs(p.shiftMin)).toBeLessThanOrEqual(bundle.config.maxShiftMin);
+        expect(p.note).toBe(MTCC_APPROVAL_NOTE);
+      }
+    }
+  });
+
+  it('reset: the baseline bundle is unchanged after the cancellation', () => {
+    const before = JSON.stringify(bundle);
+    const beforeJourneys = findJourneys(bundle, query, baseline()).map((j) => j.id);
+    compareReachability(bundle, query, cancelled);
+    applyCancellation(baseline(), cancelled);
+    expect(JSON.stringify(bundle)).toBe(before);
+    expect(baseline().some((o) => o.id === cancelled)).toBe(true);
+    expect(findJourneys(bundle, query, baseline()).map((j) => j.id)).toEqual(beforeJourneys);
   });
 });
