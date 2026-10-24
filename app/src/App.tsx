@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Banner } from './components/Banner';
+import { Header } from './components/Header';
+import { HowItWorks } from './components/HowItWorks';
+import { JourneyList } from './components/JourneyList';
 import { MapView } from './components/MapView';
+import { MobileTabs, type View } from './components/MobileTabs';
 import { PlannerForm } from './components/PlannerForm';
-import { loadBundle, type Bundle, type Leg, type Stop, type TimeRange } from './data/load';
-import { findJourneys, formatHHMM, type Journey, type JourneyQuery } from './data/planner';
+import { loadBundle, type Bundle, type Leg, type Stop } from './data/load';
+import { findJourneys, type Journey, type JourneyQuery } from './data/planner';
+import { useTheme } from './hooks/useTheme';
 import './App.css';
 
 type LoadState =
@@ -19,14 +24,12 @@ const HONESTY_TEXT =
 const NO_STOPS: Stop[] = [];
 const NO_LEGS: Leg[] = [];
 
-function formatRange(r: TimeRange): string {
-  return r.min === r.max ? formatHHMM(r.min) : `${formatHHMM(r.min)}–${formatHHMM(r.max)}`;
-}
-
 export function App() {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [, setQuery] = useState<JourneyQuery | null>(null);
   const [results, setResults] = useState<Journey[] | null>(null);
+  const [view, setView] = useState<View>('plan');
+  const { theme, toggle } = useTheme();
 
   useEffect(() => {
     let active = true;
@@ -51,9 +54,7 @@ export function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>Maldives Island Journey Planner</h1>
-      </header>
+      <Header fixture={ready?.meta.fixture ?? false} theme={theme} onToggleTheme={toggle} />
 
       <div className="banners">
         {ready?.meta.fixture && (
@@ -75,8 +76,11 @@ export function App() {
       </div>
 
       <main className="layout">
-        <section className="panel panel-left" aria-label="Planner">
-          <div className="region region-form" id="planner-form" aria-label="Planner form">
+        <section
+          className={`panel panel-plan${view === 'plan' ? '' : ' panel-hidden'}`}
+          aria-label="Planner"
+        >
+          <div className="card region" id="planner-form" aria-label="Planner form">
             {ready ? (
               <PlannerForm stops={ready.stops} onSubmit={handleSubmit} />
             ) : (
@@ -85,28 +89,22 @@ export function App() {
               </p>
             )}
           </div>
-          <div className="region region-results" id="results" aria-label="Results" aria-live="polite">
-            {results === null ? (
-              <p className="placeholder">Results will appear here.</p>
-            ) : results.length === 0 ? (
-              <>
-                <p>No journey found.</p>
-                <p className="placeholder">(Router not connected yet: waiting for R4.)</p>
-              </>
-            ) : (
-              <ul className="journey-list">
-                {results.map((j) => (
-                  <li key={j.id}>
-                    {formatRange(j.departMin)} → {formatRange(j.arriveMin)},{' '}
-                    {j.transfers} {j.transfers === 1 ? 'transfer' : 'transfers'}
-                  </li>
-                ))}
-              </ul>
-            )}
+          <div className="card region" id="results" aria-label="Results" aria-live="polite">
+            <JourneyList journeys={results ?? []} searched={results !== null} />
           </div>
+          {ready && (
+            <div className="card region">
+              <HowItWorks config={ready.config} />
+            </div>
+          )}
         </section>
-        <section className="panel panel-right" aria-label="Map">
-          <div className="region region-map" id="map">
+        {/* Stays mounted when hidden on mobile so MapLibre is not recreated; hidden
+            panels keep their size (visibility, not display) so no resize is needed. */}
+        <section
+          className={`panel panel-map${view === 'map' ? '' : ' panel-hidden'}`}
+          aria-label="Map"
+        >
+          <div className="card region-map" id="map">
             <MapView
               stops={ready?.stops ?? NO_STOPS}
               legs={ready?.legs ?? NO_LEGS}
@@ -115,6 +113,8 @@ export function App() {
           </div>
         </section>
       </main>
+
+      <MobileTabs view={view} onChange={setView} />
     </div>
   );
 }
