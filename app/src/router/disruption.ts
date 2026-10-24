@@ -1,7 +1,7 @@
 // Disruption what-if, SRS 5.5. Every function returns new values; the baseline is never mutated.
 import { assessTransfer } from './connections';
 import type { Bundle, Connection, Occurrence, Query, ScenarioResult, ShiftResult } from './model';
-import { findJourneys, isVisible, sameRide } from './planner';
+import { byDepartureStop, findJourneys, isVisible, sameRide } from './planner';
 import { expandOccurrences } from './time';
 
 /** The occurrence set with one dated occurrence removed (a simulated cancellation). */
@@ -14,12 +14,13 @@ export function applyCancellation(occurrences: readonly Occurrence[], occurrence
  * onward route from that island. Counts connections in the model, not passengers.
  */
 export function modelledConnections(bundle: Bundle, occurrences: readonly Occurrence[]): Connection[] {
-  const visible = occurrences.filter((o) => isVisible(o.leg, bundle.config));
+  const byFrom = byDepartureStop(occurrences, bundle.config);
   const out: Connection[] = [];
-  for (const a of visible) {
+  for (const a of occurrences) {
+    if (!isVisible(a.leg, bundle.config)) continue;
     const next = new Map<string, Connection>();
-    for (const d of visible) {
-      if (d.leg.from !== a.leg.to || sameRide(a, d)) continue;
+    for (const d of byFrom.get(a.leg.to) ?? []) {
+      if (sameRide(a, d)) continue;
       const assessment = assessTransfer(a, d, bundle.config);
       const key = `${d.leg.routeId}>${d.leg.to}`;
       const cur = next.get(key);

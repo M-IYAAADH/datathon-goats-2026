@@ -54,6 +54,24 @@ describe('findWaitAlternatives', () => {
     expect(r.alternatives.map((a) => [a.journey.rides[0].tripId, a.savingMin])).toEqual([['inf-ras-mle-1110', [60, 90]]]);
   });
 
+  it('boats that leave too soon after the arrival do not crowd out a catchable alternative', () => {
+    const query = q('THODDOO', '2026-10-25');
+    const tooSoon = [1, 2, 3].map((n) => ({
+      ...fixture.legs.find((l) => l.id === 'inf-ras-mle-1110')!,
+      id: `too-soon-${n}`, tripId: `too-soon-${n}`, dep: { min: 465, max: 470 }, arr: { min: 500, max: 520 },
+    }));
+    const bundle = { ...fixture, legs: [...fixture.legs, ...tooSoon] };
+    const j = official(findJourneys(bundle, query))!;
+    expect(findWaitAlternatives(bundle, query, j, 0).alternatives.map((a) => a.journey.rides[0].tripId)).toEqual(['inf-ras-mle-1110']);
+  });
+
+  it('alternatives stay within maxTransfers', () => {
+    const query = q('THODDOO', '2026-10-25');
+    const bundle = { ...fixture, config: { ...fixture.config, maxTransfers: 0 } };
+    const j = official(findJourneys(fixture, query))!;
+    expect(findWaitAlternatives(bundle, query, j, 0).alternatives).toEqual([]);
+  });
+
   it('returns no alternatives when nothing reaches the destination earlier', () => {
     const query = q('THODDOO', '2026-10-25');
     const legs = fixture.legs.filter((l) => l.source === 'mtcc');

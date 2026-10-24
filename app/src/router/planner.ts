@@ -12,6 +12,18 @@ export function isVisible(leg: Leg, config: Config): boolean {
   return leg.source === 'mtcc' || (!!leg.evidence && leg.evidence.devices >= config.minDevices && leg.evidence.days >= config.minDays);
 }
 
+/** Visible occurrences grouped by departure stop. */
+export function byDepartureStop(occurrences: readonly Occurrence[], config: Config): Map<string, Occurrence[]> {
+  const out = new Map<string, Occurrence[]>();
+  for (const o of occurrences) {
+    if (!isVisible(o.leg, config)) continue;
+    const list = out.get(o.leg.from);
+    if (list) list.push(o);
+    else out.set(o.leg.from, [o]);
+  }
+  return out;
+}
+
 export const sameRide = (a: Occurrence, b: Occurrence) => a.leg.tripId === b.leg.tripId && a.serviceDate === b.serviceDate;
 
 /** Group a chain of occurrences into rides and assess each change of boat. */
@@ -53,18 +65,17 @@ export function buildJourney(occs: Occurrence[], config: Config): Journey {
  * Up to 3 journeys from query.origin to query.destination, earliest arrival
  * (arr.max) first, at most config.maxTransfers changes of boat, no Missed transfer.
  * `occurrences` lets callers (disruption what-ifs) pass a modified set.
+ * `after`: an arriving occurrence the search continues from; its first change of boat
+ * is checked and counted like any other transfer.
  */
 export function findJourneys(
   bundle: Bundle,
   query: Query,
   occurrences = expandOccurrences(bundle.legs, query.date, bundle.config.horizonHours),
+  after?: Occurrence,
 ): Journey[] {
   const { config } = bundle;
-  const byFrom = new Map<string, Occurrence[]>();
-  for (const o of occurrences) {
-    if (!isVisible(o.leg, config)) continue;
-    byFrom.set(o.leg.from, [...(byFrom.get(o.leg.from) ?? []), o]);
-  }
+  const byFrom = byDepartureStop(occurrences, config);
 
   const found = new Map<string, Journey>();
   const path: Occurrence[] = [];
@@ -72,7 +83,7 @@ export function findJourneys(
 
   // shortcut: exhaustive depth-limited search, fine for timetable-sized data; add pruning by best arrival if R9 finds it slow.
   const walk = (stop: string, transfers: number) => {
-    const prev = path[path.length - 1];
+    const prev = path[path.length - 1] ?? after;
     for (const d of byFrom.get(stop) ?? []) {
       if (visited.has(d.leg.to)) continue;
       let t = transfers;
@@ -117,9 +128,10 @@ export function findWaitAlternatives(
   const t = journey.transfers[transferIndex];
   const before = journey.rides[t.fromRide].occurrences;
   const arriving = before[before.length - 1];
-  const onward = findJourneys(bundle, { ...query, origin: t.stop, earliestDep: arriving.arr.min }, occurrences);
+  // Transfers before this one are already used up; the change at t.stop counts too.
+  const budget = { ...bundle, config: { ...bundle.config, maxTransfers: bundle.config.maxTransfers - transferIndex } };
+  const onward = findJourneys(budget, { ...query, origin: t.stop }, occurrences, arriving);
   const alternatives = onward
-    .filter((alt) => assessTransfer(arriving, alt.rides[0].occurrences[0], bundle.config).status !== 'missed')
     .map((alt): WaitAlternative => ({
       journey: alt,
       savingMin: [journey.arr.min - alt.arr.max, journey.arr.max - alt.arr.min],
