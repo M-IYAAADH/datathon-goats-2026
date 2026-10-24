@@ -2,46 +2,68 @@
 :root {
   color-scheme: light;
 
-  --color-bg: #f3f5f4;
+  --color-bg: #f6f7f9;
   --color-surface: #ffffff;
-  --color-surface-2: #eef2f1;
-  --color-border: #dde4e2;
-  --color-border-strong: #c3cecb;
-  --color-text: #0f1f24;
-  --color-text-muted: #44575c;
-  --color-text-subtle: #5f7276;
+  --color-surface-2: #f3f4f6;
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
+  --color-text: #111827;
+  --color-text-muted: #4b5563;
+  --color-text-subtle: #6b7280;
   --color-on-primary: #ffffff;
 
-  --color-primary: #0b6e78;
-  --color-primary-hover: #095a62;
-  --color-primary-soft: #e2f2f3;
-  --color-focus: #0b6e78;
+  --color-primary: #0f5ea8;
+  --color-primary-hover: #0b4c89;
+  --color-primary-soft: #e8f1fb;
+  --color-focus: #0f5ea8;
 
-  --color-safe: #17803d;
-  --color-safe-soft: #e6f4ea;
-  --color-possible: #9a5400;
-  --color-possible-soft: #fdf1dd;
-  --color-longwait: #b4430c;
-  --color-longwait-soft: #fce9df;
-  --color-danger: #b42318;
-  --color-danger-soft: #fdecea;
-  --color-info: #0b5d8a;
-  --color-info-soft: #e5f1f8;
+  --color-safe: #15803d;
+  --color-safe-soft: #e7f6ec;
+  --color-possible: #b45309;
+  --color-possible-soft: #fdf3e2;
+  --color-longwait: #b45309;
+  --color-longwait-soft: #fdf3e2;
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fdecec;
+  --color-info: #0f5ea8;
+  --color-info-soft: #e8f1fb;
   --color-sample: #854a00;
   --color-sample-soft: #fff1d6;
 
-  --map-water: #d7ebf0;
-  --map-official: #1d5fbf;
-  --map-inferred: #0f8a7e;
+  --map-water: #dfe9f0;
+  --map-official: #2563eb;
+  --map-inferred: #0d9488;
   --map-highlight: #e69500;
-  --map-cancelled: #d0302a;
-  --map-stop: #0f1f24;
-  --map-hub: #0b6e78;
+  --map-cancelled: #dc2626;
+  --map-stop: #1f2937;
+  --map-hub: #0f5ea8;
   --map-halo: #ffffff;
   --map-land: #efe6cf;
   --map-land-stop: #e3d3a8;
   --map-land-outline: #b9a77a;
   --map-atoll: #5f8f9a;
+
+  /* Reference-style short names, mapped onto the theme tokens above (so dark mode follows). */
+  --bg: var(--color-bg);
+  --panel: var(--color-surface);
+  --ink: var(--color-text);
+  --ink2: var(--color-text-muted);
+  --ink3: var(--color-text-subtle);
+  --line: var(--color-border);
+  --line2: var(--color-border-strong);
+  --accent: var(--color-primary);
+  --accent-soft: var(--color-primary-soft);
+  --ferry: var(--map-official);
+  --speed: var(--map-inferred);
+  --obs: #ea580c;
+  --cancel: var(--map-cancelled);
+  --shift: #7c3aed;
+  --ok: var(--color-safe);
+  --ok-soft: var(--color-safe-soft);
+  --warn: var(--color-possible);
+  --warn-soft: var(--color-possible-soft);
+  --bad: var(--color-danger);
+  --bad-soft: var(--color-danger-soft);
 
   --space-1: 4px;
   --space-2: 8px;
@@ -60,11 +82,12 @@
   --shadow-1: 0 1px 2px rgb(15 31 36 / 6%), 0 1px 3px rgb(15 31 36 / 8%);
   --shadow-2: 0 4px 12px rgb(15 31 36 / 10%), 0 2px 4px rgb(15 31 36 / 6%);
 
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans:
+    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   --text-xs: 12px;
   --text-sm: 13px;
-  --text-md: 14px;
+  --text-md: 13.5px;
   --text-lg: 16px;
   --text-xl: 20px;
 
