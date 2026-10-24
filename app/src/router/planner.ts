@@ -1,7 +1,16 @@
 // Journey search, SRS section 6 steps 1 and 2.
 import { assessTransfer } from './connections';
 import type {
-  Bundle, Config, Journey, Leg, Occurrence, Query, Ride, Transfer, WaitAlternative, WaitAlternativesResult,
+  Bundle,
+  Config,
+  Journey,
+  Leg,
+  Occurrence,
+  Query,
+  Ride,
+  Transfer,
+  WaitAlternative,
+  WaitAlternativesResult,
 } from './model';
 import { expandOccurrences } from './time';
 
@@ -9,11 +18,19 @@ const MAX_RESULTS = 3;
 
 /** Inferred legs below config.minDevices / minDays are hidden everywhere. */
 export function isVisible(leg: Leg, config: Config): boolean {
-  return leg.source === 'mtcc' || (!!leg.evidence && leg.evidence.devices >= config.minDevices && leg.evidence.days >= config.minDays);
+  return (
+    leg.source === 'mtcc' ||
+    (!!leg.evidence &&
+      leg.evidence.devices >= config.minDevices &&
+      leg.evidence.days >= config.minDays)
+  );
 }
 
 /** Visible occurrences grouped by departure stop. */
-export function byDepartureStop(occurrences: readonly Occurrence[], config: Config): Map<string, Occurrence[]> {
+export function byDepartureStop(
+  occurrences: readonly Occurrence[],
+  config: Config,
+): Map<string, Occurrence[]> {
   const out = new Map<string, Occurrence[]>();
   for (const o of occurrences) {
     if (!isVisible(o.leg, config)) continue;
@@ -24,7 +41,8 @@ export function byDepartureStop(occurrences: readonly Occurrence[], config: Conf
   return out;
 }
 
-export const sameRide = (a: Occurrence, b: Occurrence) => a.leg.tripId === b.leg.tripId && a.serviceDate === b.serviceDate;
+export const sameRide = (a: Occurrence, b: Occurrence) =>
+  a.leg.tripId === b.leg.tripId && a.serviceDate === b.serviceDate;
 
 /** Group a chain of occurrences into rides and assess each change of boat. */
 export function buildJourney(occs: Occurrence[], config: Config): Journey {
@@ -47,7 +65,11 @@ export function buildJourney(occs: Occurrence[], config: Config): Journey {
     stop: r.from,
     fromRide: i,
     toRide: i + 1,
-    assessment: assessTransfer(rides[i].occurrences[rides[i].occurrences.length - 1], r.occurrences[0], config),
+    assessment: assessTransfer(
+      rides[i].occurrences[rides[i].occurrences.length - 1],
+      r.occurrences[0],
+      config,
+    ),
   }));
   return {
     id: occs.map((o) => o.id).join('>'),
@@ -90,7 +112,8 @@ export function findJourneys(
       if (!prev) {
         if (d.dep.min < query.earliestDep) continue;
       } else if (!sameRide(prev, d)) {
-        if (++t > config.maxTransfers || assessTransfer(prev, d, config).status === 'missed') continue;
+        if (++t > config.maxTransfers || assessTransfer(prev, d, config).status === 'missed')
+          continue;
       } else if (d.dep.min < prev.arr.min) continue;
 
       path.push(d);
@@ -108,7 +131,10 @@ export function findJourneys(
   walk(query.origin, 0);
 
   return [...found.values()]
-    .sort((a, b) => a.arr.max - b.arr.max || b.dep.min - a.dep.min || a.transfers.length - b.transfers.length)
+    .sort(
+      (a, b) =>
+        a.arr.max - b.arr.max || b.dep.min - a.dep.min || a.transfers.length - b.transfers.length,
+    )
     .slice(0, MAX_RESULTS);
 }
 
@@ -129,7 +155,10 @@ export function findWaitAlternatives(
   const before = journey.rides[t.fromRide].occurrences;
   const arriving = before[before.length - 1];
   // Transfers before this one are already used up; the change at t.stop counts too.
-  const budget = { ...bundle, config: { ...bundle.config, maxTransfers: bundle.config.maxTransfers - transferIndex } };
+  const budget = {
+    ...bundle,
+    config: { ...bundle.config, maxTransfers: bundle.config.maxTransfers - transferIndex },
+  };
   const onward = findJourneys(budget, { ...query, origin: t.stop }, occurrences, arriving);
   const alternatives = onward
     .map((alt): WaitAlternative => ({
