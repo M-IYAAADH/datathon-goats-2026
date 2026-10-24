@@ -43,7 +43,12 @@ export function Header({ fixture, theme, onToggleTheme }: HeaderProps) {
         <h1 className="app-title">Maldives Island Journey Planner</h1>
         <p className="app-subtitle">Ferries and inferred speedboats, together</p>
       </div>
-      {fixture && <span className="pill pill-sample">SAMPLE DATA</span>}
+      {fixture ? (
+        <span className="badge sample">SAMPLE DATA</span>
+      ) : (
+        <span className="badge">Real data · Aug 2025 evidence</span>
+      )}
+      <span className="app-header-spacer" />
       <button
         type="button"
         className="btn btn-ghost btn-icon"

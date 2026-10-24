@@ -5,7 +5,6 @@ import { Header } from './components/Header';
 import { HowItWorks } from './components/HowItWorks';
 import { JourneyList } from './components/JourneyList';
 import { MapView } from './components/MapView';
-import { MobileTabs, type View } from './components/MobileTabs';
 import { PlannerForm } from './components/PlannerForm';
 import { loadBundle, type Bundle, type Leg, type Stop } from './data/load';
 import { findJourneys, type Journey, type JourneyQuery } from './data/planner';
@@ -27,13 +26,21 @@ const NO_LEGS: Leg[] = [];
 const NO_JOURNEYS: Journey[] = [];
 const NO_IDS: string[] = [];
 
+type Tab = 'plan' | 'disruption' | 'about';
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'plan', label: 'Journey planner' },
+  { id: 'disruption', label: 'Disruption' },
+  { id: 'about', label: 'About the data' },
+];
+
 export function App() {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [query, setQuery] = useState<JourneyQuery | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [results, setResults] = useState<Journey[] | null>(null);
   const [scenario, setScenario] = useState<Scenario | null>(null);
-  const [view, setView] = useState<View>('plan');
+  const [tab, setTab] = useState<Tab>('plan');
   const { theme, toggle } = useTheme();
 
   useEffect(() => {
@@ -74,67 +81,100 @@ export function App() {
     <div className="app">
       <Header fixture={ready?.meta.fixture ?? false} theme={theme} onToggleTheme={toggle} />
 
-      <div className="banners">
-        {ready?.meta.fixture && (
-          <Banner kind="warning" label="SAMPLE DATA">
-            This app is running on sample data, not the real data bundle.
-          </Banner>
-        )}
-        <Banner kind="info" label="About this data">
-          {HONESTY_TEXT}
-        </Banner>
-        {state.status === 'loading' && (
-          <p className="load-status" role="status">
-            Loading data…
-          </p>
-        )}
-        {state.status === 'error' && (
-          <p className="load-error" role="alert">
-            Could not load data. {state.message}
-          </p>
-        )}
-      </div>
-
       <main className="layout">
-        <section
-          className={`panel panel-plan${view === 'plan' ? '' : ' panel-hidden'}`}
-          aria-label="Planner"
-        >
-          <div className="card region" id="planner-form" aria-label="Planner form">
-            {ready ? (
-              <PlannerForm stops={ready.stops} onSubmit={handleSubmit} />
-            ) : (
-              <p className="placeholder">
-                {state.status === 'loading'
-                  ? 'Planner available once data has loaded.'
-                  : 'Planner unavailable.'}
+        <aside id="panel" aria-label="Planner">
+          <div className="tabs" role="tablist" aria-label="Sections">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                id={`tab-${t.id}`}
+                aria-selected={tab === t.id}
+                aria-controls={`tabpanel-${t.id}`}
+                className={tab === t.id ? 'active' : undefined}
+                onClick={() => setTab(t.id)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="tabbody">
+            {ready?.meta.fixture && (
+              <Banner kind="warning" label="SAMPLE DATA">
+                This app is running on sample data, not the real data bundle.
+              </Banner>
+            )}
+            {state.status === 'loading' && (
+              <p className="load-status" role="status">
+                Loading data…
               </p>
             )}
-          </div>
-          <div className="card region" id="results" aria-label="Results" aria-live="polite">
-            {ready ? (
-              <JourneyList
-                journeys={results ?? NO_JOURNEYS}
-                searched={results !== null}
-                bundle={ready}
-                query={query}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-              />
-            ) : (
-              <p className="placeholder">Results appear here after you plan a journey.</p>
+            {state.status === 'error' && (
+              <p className="load-error" role="alert">
+                Could not load data. {state.message}
+              </p>
             )}
+            {/* All tab panels stay mounted (hidden) so form, results and scenario state survive tab switches. */}
+            <div
+              role="tabpanel"
+              id="tabpanel-plan"
+              aria-labelledby="tab-plan"
+              hidden={tab !== 'plan'}
+            >
+              <div className="region" id="planner-form" aria-label="Planner form">
+                {ready ? (
+                  <PlannerForm stops={ready.stops} onSubmit={handleSubmit} />
+                ) : (
+                  <p className="placeholder">
+                    {state.status === 'loading'
+                      ? 'Planner available once data has loaded.'
+                      : 'Planner unavailable.'}
+                  </p>
+                )}
+              </div>
+              <div className="region" id="results" aria-label="Results" aria-live="polite">
+                {ready ? (
+                  <JourneyList
+                    journeys={results ?? NO_JOURNEYS}
+                    searched={results !== null}
+                    bundle={ready}
+                    query={query}
+                    selectedId={selectedId}
+                    onSelect={setSelectedId}
+                  />
+                ) : (
+                  <p className="placeholder">Results appear here after you plan a journey.</p>
+                )}
+              </div>
+            </div>
+            <div
+              role="tabpanel"
+              id="tabpanel-disruption"
+              aria-labelledby="tab-disruption"
+              hidden={tab !== 'disruption'}
+            >
+              {ready ? (
+                <DisruptionPanel bundle={ready} query={query} onScenarioChange={setScenario} />
+              ) : (
+                <p className="placeholder">Available once data has loaded.</p>
+              )}
+            </div>
+            <div
+              role="tabpanel"
+              id="tabpanel-about"
+              aria-labelledby="tab-about"
+              hidden={tab !== 'about'}
+            >
+              <Banner kind="info" label="About this data">
+                {HONESTY_TEXT}
+              </Banner>
+              {ready && <HowItWorks config={ready.config} />}
+            </div>
           </div>
-          {ready && <DisruptionPanel bundle={ready} query={query} onScenarioChange={setScenario} />}
-          {ready && <HowItWorks config={ready.config} />}
-        </section>
-        {/* Stays mounted when hidden on mobile so MapLibre is not recreated; hidden
-            panels keep their size (visibility, not display) so no resize is needed. */}
-        <section
-          className={`panel panel-map${view === 'map' ? '' : ' panel-hidden'}`}
-          aria-label="Map"
-        >
-          <div className="card region-map" id="map">
+        </aside>
+        <section className="mapcell" aria-label="Map">
+          <div className="region-map" id="map">
             <MapView
               stops={ready?.stops ?? NO_STOPS}
               legs={ready?.legs ?? NO_LEGS}
@@ -145,8 +185,6 @@ export function App() {
           </div>
         </section>
       </main>
-
-      <MobileTabs view={view} onChange={setView} />
     </div>
   );
 }

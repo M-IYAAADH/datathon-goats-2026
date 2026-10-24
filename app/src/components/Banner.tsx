@@ -30,7 +30,7 @@ function BannerIcon({ kind }: { kind: BannerProps['kind'] }) {
 
 export function Banner({ kind, label, children }: BannerProps) {
   return (
-    <div className={`banner banner-${kind}`} role="note">
+    <div className={`note banner banner-${kind}${kind === 'info' ? ' info' : ''}`} role="note">
       <BannerIcon kind={kind} />
       <p className="banner-body">
         <strong className="banner-label">{label}</strong>{' '}
