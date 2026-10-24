@@ -32,6 +32,7 @@ export function PlannerForm({
   const [destination, setDestination] = useState('');
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState(DEFAULT_TIME);
+  const [officialOnly, setOfficialOnly] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const sorted = useMemo(() => [...stops].sort((a, b) => a.name.localeCompare(b.name)), [stops]);
@@ -62,7 +63,7 @@ export function PlannerForm({
       return;
     }
     setError(null);
-    onSubmit({ origin, destination, date, earliestDep });
+    onSubmit({ origin, destination, date, earliestDep, officialOnly });
   }
 
   const options = sorted.map((s) => (
@@ -160,6 +161,16 @@ export function PlannerForm({
           disabled={disabled}
         />
       </div>
+
+      <label className="field-label planner-official" style={{ gridColumn: '1 / -1' }}>
+        <input
+          type="checkbox"
+          checked={officialOnly}
+          onChange={(e) => setOfficialOnly(e.target.checked)}
+          disabled={disabled}
+        />{' '}
+        Official MTCC ferries only
+      </label>
 
       <button type="submit" className="btn btn-primary planner-submit" disabled={disabled}>
         Plan journey

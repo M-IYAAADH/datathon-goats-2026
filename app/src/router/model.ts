@@ -122,6 +122,8 @@ export interface Query {
   date: string;
   /** Earliest departure, minutes since 00:00 of `date`. */
   earliestDep: number;
+  /** true = official MTCC legs only, inferred legs excluded. Default false. */
+  officialOnly?: boolean;
 }
 
 // ---------- Router outputs ----------

@@ -35,6 +35,15 @@ describe('findJourneys', () => {
     expect(js.flatMap((x) => x.rides.map((r) => r.tripId))).not.toContain('inf-hidden');
   });
 
+  it('officialOnly drops every inferred leg; default keeps them', () => {
+    const all = findJourneys(fixture, q('MATHIVERI', '2026-10-25'));
+    expect(all.some((j) => j.usesInferred)).toBe(true);
+    const off = findJourneys(fixture, { ...q('MATHIVERI', '2026-10-25'), officialOnly: true });
+    expect(off.length).toBeGreaterThan(0);
+    expect(off.every((j) => !j.usesInferred)).toBe(true);
+    expect(off.map((j) => j.rides.map((r) => r.tripId))).toEqual([['301-0835', '302-1100']]);
+  });
+
   it('T13 same query on Fri 30 Oct: Rasdhoo to Malé 11:00 not offered', () => {
     const js = findJourneys(fixture, q('MATHIVERI', '2026-10-30'));
     expect(js.flatMap((j) => j.rides.map((r) => r.tripId))).not.toContain('302-1100');
