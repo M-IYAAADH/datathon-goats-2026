@@ -54,3 +54,33 @@
   white-space: nowrap;
   pointer-events: none;
 }
+
+.map-atoll-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--map-atoll);
+  opacity: 0.9;
+  text-shadow:
+    0 0 2px var(--map-water),
+    0 0 3px var(--map-water);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Stop labels above atoll labels when they overlap. */
+.maplibregl-marker:has(.map-label) {
+  z-index: 1;
+}
+
+.map-view .maplibregl-ctrl-attrib {
+  font-size: 10px;
+  max-width: min(520px, calc(100% - 20px));
+}
+
+/* maplibre forces visibility:visible on the open compact attribution; let it follow a
+   hidden map panel (mobile Plan tab) instead of floating over other content. */
+.map-view .maplibregl-ctrl-attrib.maplibregl-compact-show {
+  visibility: inherit;
+}

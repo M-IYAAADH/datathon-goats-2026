@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
+  AttributionControl,
   GPUInitializationError,
   LngLatBounds,
   Map as MlMap,
@@ -28,6 +29,26 @@ type MapViewProps = {
   config?: MapConfig;
   onStopClick?: (stopId: string) => void;
 };
+
+// Below this zoom only hubs and stops on the selected journey are labelled.
+export const LABEL_ALL_ZOOM = 10;
+
+export type LabelBox = { x0: number; y0: number; x1: number; y1: number };
+
+export function overlaps(a: LabelBox, b: LabelBox, gap = 2): boolean {
+  return a.x0 < b.x1 + gap && b.x0 < a.x1 + gap && a.y0 < b.y1 + gap && b.y0 < a.y1 + gap;
+}
+
+export function routeStopIds(legs: Leg[], highlightLegIds: string[]): string[] {
+  const hi = new Set(highlightLegIds);
+  const ids = new Set<string>();
+  for (const l of legs) {
+    if (!hi.has(l.id)) continue;
+    ids.add(l.from);
+    ids.add(l.to);
+  }
+  return [...ids].sort();
+}
 
 export type Segment = {
   key: string;
@@ -148,11 +169,94 @@ function stopCollection(stops: Stop[]): FeatureCollection {
 
 const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
 
-// Plain background only: no tiles, no glyphs, no sprites, so nothing is fetched.
+// Static polygon overlays (OneMap island outlines, atoll hulls) served from public/data.
+type Ring = [number, number][];
+type PolyGeometry =
+  { type: 'Polygon'; coordinates: Ring[] } | { type: 'MultiPolygon'; coordinates: Ring[][] };
+export type PolygonCollection = {
+  type: 'FeatureCollection';
+  features: {
+    type: 'Feature';
+    properties: Record<string, unknown> | null;
+    geometry: PolyGeometry;
+  }[];
+};
+export type Overlay = { data: PolygonCollection; attribution: string };
+
+// Keeps Polygon/MultiPolygon features; returns null for anything that is not a
+// FeatureCollection so a bad file degrades to "no overlay".
+export function parseOverlay(raw: unknown): Overlay | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const fc = raw as { type?: unknown; features?: unknown; attribution?: unknown };
+  if (fc.type !== 'FeatureCollection' || !Array.isArray(fc.features)) return null;
+  const features = fc.features.filter((f): f is PolygonCollection['features'][number] => {
+    const g = (f as { geometry?: { type?: unknown; coordinates?: unknown } } | null)?.geometry;
+    return (
+      !!g && (g.type === 'Polygon' || g.type === 'MultiPolygon') && Array.isArray(g.coordinates)
+    );
+  });
+  return {
+    data: { type: 'FeatureCollection', features },
+    attribution: typeof fc.attribution === 'string' ? fc.attribution.trim() : '',
+  };
+}
+
+// Area-weighted centroid of the largest outer ring (good enough for a convex hull label).
+export function polygonCentroid(geometry: PolyGeometry): [number, number] | null {
+  const rings =
+    geometry.type === 'Polygon' ? [geometry.coordinates[0]] : geometry.coordinates.map((p) => p[0]);
+  let best: { a: number; x: number; y: number } | null = null;
+  for (const ring of rings) {
+    if (!ring || ring.length < 3) continue;
+    let a = 0;
+    let cx = 0;
+    let cy = 0;
+    for (let i = 0; i < ring.length; i++) {
+      const [x0, y0] = ring[i];
+      const [x1, y1] = ring[(i + 1) % ring.length];
+      const k = x0 * y1 - x1 * y0;
+      a += k;
+      cx += (x0 + x1) * k;
+      cy += (y0 + y1) * k;
+    }
+    if (a === 0) continue;
+    const cand = { a: Math.abs(a), x: cx / (3 * a), y: cy / (3 * a) };
+    if (!best || cand.a > best.a) best = cand;
+  }
+  return best ? [best.x, best.y] : null;
+}
+
+// One warning per file per page load (React StrictMode runs effects twice in dev).
+const warnedOverlays = new Set<string>();
+
+async function loadOverlay(file: string): Promise<Overlay | null> {
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}data/${file}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const parsed = parseOverlay(await res.json());
+    if (!parsed) throw new Error('not a GeoJSON FeatureCollection');
+    return parsed;
+  } catch (e) {
+    if (warnedOverlays.has(file)) return null;
+    warnedOverlays.add(file);
+    console.warn(
+      `Map: ${file} not loaded, drawing without it (${e instanceof Error ? e.message : String(e)})`,
+    );
+    return null;
+  }
+}
+
+function landFill(c: MapColors) {
+  return ['case', ['==', ['get', 'isStop'], true], c.landStop, c.land] as unknown as string;
+}
+
+// No tiles, no glyphs, no sprites: only local GeoJSON overlays are fetched.
 function buildStyle(c: MapColors): Exclude<MapOptions['style'], string | undefined> {
   return {
     version: 8,
     sources: {
+      atolls: { type: 'geojson', data: EMPTY },
+      land: { type: 'geojson', data: EMPTY },
       lines: { type: 'geojson', data: EMPTY },
       highlight: { type: 'geojson', data: EMPTY },
       cancelled: { type: 'geojson', data: EMPTY },
@@ -160,6 +264,35 @@ function buildStyle(c: MapColors): Exclude<MapOptions['style'], string | undefin
     },
     layers: [
       { id: 'bg', type: 'background', paint: { 'background-color': c.background } },
+      {
+        id: 'atoll-fill',
+        type: 'fill',
+        source: 'atolls',
+        paint: { 'fill-color': c.atoll, 'fill-opacity': 0.06 },
+      },
+      {
+        id: 'atoll-outline',
+        type: 'line',
+        source: 'atolls',
+        paint: {
+          'line-color': c.atoll,
+          'line-width': 1.2,
+          'line-opacity': 0.7,
+          'line-dasharray': [4, 3],
+        },
+      },
+      {
+        id: 'land-fill',
+        type: 'fill',
+        source: 'land',
+        paint: { 'fill-color': landFill(c) },
+      },
+      {
+        id: 'land-outline',
+        type: 'line',
+        source: 'land',
+        paint: { 'line-color': c.landOutline, 'line-width': 0.6 },
+      },
       {
         id: 'lines-official',
         type: 'line',
@@ -210,6 +343,10 @@ function buildStyle(c: MapColors): Exclude<MapOptions['style'], string | undefin
 function applyColors(map: MlMap, c: MapColors) {
   const has = (layer: string) => !!map.getLayer(layer);
   if (has('bg')) map.setPaintProperty('bg', 'background-color', c.background);
+  if (has('atoll-fill')) map.setPaintProperty('atoll-fill', 'fill-color', c.atoll);
+  if (has('atoll-outline')) map.setPaintProperty('atoll-outline', 'line-color', c.atoll);
+  if (has('land-fill')) map.setPaintProperty('land-fill', 'fill-color', landFill(c));
+  if (has('land-outline')) map.setPaintProperty('land-outline', 'line-color', c.landOutline);
   if (has('lines-official')) map.setPaintProperty('lines-official', 'line-color', c.official);
   if (has('lines-inferred')) map.setPaintProperty('lines-inferred', 'line-color', c.inferred);
   if (has('lines-highlight')) map.setPaintProperty('lines-highlight', 'line-color', c.highlight);
@@ -224,7 +361,12 @@ function fitToStops(map: MlMap, stops: Stop[]) {
   if (stops.length === 0) return;
   const bounds = new LngLatBounds();
   for (const s of stops) bounds.extend([s.lon, s.lat]);
-  map.fitBounds(bounds, { padding: 48, maxZoom: 11, duration: 0 });
+  // Narrow screens: less padding, but keep room on the right for the name labels.
+  const narrow = map.getContainer().clientWidth < 600;
+  const padding = narrow
+    ? { top: 40, bottom: 56, left: 32, right: 64 }
+    : { top: 48, bottom: 64, left: 48, right: 96 };
+  map.fitBounds(bounds, { padding, maxZoom: 11, duration: 0 });
 }
 
 export function MapView({
@@ -251,6 +393,23 @@ export function MapView({
   );
   const dataRef = useRef({ stops, segments });
   dataRef.current = { stops, segments };
+  const [land, setLand] = useState<Overlay | null>(null);
+  const [atolls, setAtolls] = useState<Overlay | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+  // Stops on the selected journey (highlighted legs), in a stable string key for effects.
+  const routeKey = useMemo(
+    () => routeStopIds(legs, highlightLegIds ?? []).join(','),
+    [legs, highlightLegIds],
+  );
+
+  useEffect(() => {
+    let live = true;
+    void loadOverlay('islands.geojson').then((o) => live && setLand(o));
+    void loadOverlay('atolls.geojson').then((o) => live && setAtolls(o));
+    return () => {
+      live = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (fallback || !containerRef.current) return;
@@ -275,7 +434,7 @@ export function MapView({
       loadedRef.current = true;
       applyColors(map, colorsRef.current);
       applyData(map, dataRef.current.stops, dataRef.current.segments);
-      fitToStops(map, dataRef.current.stops);
+      setMapReady(true);
     });
     map.on('click', 'stops', (e) => {
       const id = e.features?.[0]?.properties?.id;
@@ -293,6 +452,7 @@ export function MapView({
     return () => {
       resizer?.disconnect();
       loadedRef.current = false;
+      setMapReady(false);
       mapRef.current = null;
       map.remove();
     };
@@ -308,25 +468,102 @@ export function MapView({
     if (map && loadedRef.current) applyData(map, stops, segments);
   }, [stops, segments]);
 
+  // Fit to the selected journey when there is one, otherwise to all stops.
   useEffect(() => {
     const map = mapRef.current;
-    if (map && loadedRef.current) fitToStops(map, stops);
-  }, [stops]);
+    if (!map || !mapReady) return;
+    const onRoute = new Set(routeKey ? routeKey.split(',') : []);
+    const routeStops = stops.filter((s) => onRoute.has(s.id));
+    fitToStops(map, routeStops.length >= 2 ? routeStops : stops);
+  }, [stops, routeKey, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    (map.getSource('land') as GeoJSONSource | undefined)?.setData(land?.data ?? EMPTY);
+    (map.getSource('atolls') as GeoJSONSource | undefined)?.setData(atolls?.data ?? EMPTY);
+  }, [land, atolls, mapReady]);
+
+  // OneMap licence credit (and any other attribution the overlay files carry).
+  useEffect(() => {
+    const map = mapRef.current;
+    const text = [...new Set([land?.attribution, atolls?.attribution].filter(Boolean))].join(' | ');
+    if (!map || !mapReady || !text) return;
+    const control = new AttributionControl({ compact: true, customAttribution: text });
+    // The credit is long: on phones put it top-right (the legend is bottom-left) and
+    // start collapsed to the (i) button; tap to read it.
+    const narrow = map.getContainer().clientWidth < 600;
+    map.addControl(control, narrow ? 'top-right' : 'bottom-right');
+    if (narrow) {
+      map
+        .getContainer()
+        .querySelector('.maplibregl-ctrl-attrib.maplibregl-compact')
+        ?.classList.remove('maplibregl-compact-show');
+    }
+    return () => {
+      map.removeControl(control);
+    };
+  }, [land, atolls, mapReady]);
+
+  // Atoll names: one quiet HTML label per atoll at its hull centroid.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (fallback || !map || !atolls) return;
+    const markers = atolls.data.features.flatMap((f) => {
+      const name = f.properties?.name;
+      const at = polygonCentroid(f.geometry);
+      if (typeof name !== 'string' || !at) return [];
+      const el = document.createElement('span');
+      el.className = 'map-atoll-label';
+      el.textContent = name;
+      return [new Marker({ element: el, anchor: 'center' }).setLngLat(at).addTo(map)];
+    });
+    return () => markers.forEach((m) => m.remove());
+  }, [atolls, fallback, mapReady]);
 
   // Names as HTML labels, since the style has no glyphs for symbol layers.
   useEffect(() => {
     const map = mapRef.current;
     if (fallback || !map) return;
-    const markers = stops.map((s) => {
-      const el = document.createElement('span');
-      el.className = 'map-label';
-      el.textContent = s.name;
-      return new Marker({ element: el, anchor: 'left', offset: [9, 0] })
-        .setLngLat([s.lon, s.lat])
-        .addTo(map);
-    });
-    return () => markers.forEach((m) => m.remove());
-  }, [stops, fallback]);
+    const onRoute = new Set(routeKey ? routeKey.split(',') : []);
+    const labels = stops
+      .map((s) => {
+        const el = document.createElement('span');
+        el.className = 'map-label';
+        el.textContent = s.name;
+        const marker = new Marker({ element: el, anchor: 'left', offset: [9, 0] })
+          .setLngLat([s.lon, s.lat])
+          .addTo(map);
+        const rank = onRoute.has(s.id) ? 0 : s.kind === 'hub' ? 1 : 2;
+        return { s, el, marker, rank };
+      })
+      .sort((a, b) => a.rank - b.rank);
+    const place = () => {
+      const showAll = map.getZoom() >= LABEL_ALL_ZOOM;
+      const placed: LabelBox[] = [];
+      for (const { s, el, rank } of labels) {
+        let show = rank < 2 || showAll;
+        if (show) {
+          const p = map.project([s.lon, s.lat]);
+          const box = {
+            x0: p.x + 9,
+            y0: p.y - el.offsetHeight / 2,
+            x1: p.x + 9 + el.offsetWidth,
+            y1: p.y + el.offsetHeight / 2,
+          };
+          show = !placed.some((b) => overlaps(b, box));
+          if (show) placed.push(box);
+        }
+        el.style.visibility = show ? '' : 'hidden';
+      }
+    };
+    place();
+    map.on('moveend', place);
+    return () => {
+      map.off('moveend', place);
+      labels.forEach((l) => l.marker.remove());
+    };
+  }, [stops, routeKey, fallback, mapReady]);
 
   return (
     <div className="map-view">

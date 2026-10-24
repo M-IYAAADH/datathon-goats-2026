@@ -9,6 +9,10 @@ export type MapColors = {
   stop: string;
   hub: string;
   halo: string;
+  land: string;
+  landStop: string;
+  landOutline: string;
+  atoll: string;
 };
 
 // Used only when a --map-* custom property is empty (tests, no stylesheet loaded).
@@ -21,6 +25,10 @@ const FALLBACK: MapColors = {
   stop: '#0f1f24',
   hub: '#0b6e78',
   halo: '#ffffff',
+  land: '#efe6cf',
+  landStop: '#e3d3a8',
+  landOutline: '#b9a77a',
+  atoll: '#5f8f9a',
 };
 
 const VARS: Record<keyof MapColors, string> = {
@@ -32,6 +40,10 @@ const VARS: Record<keyof MapColors, string> = {
   stop: '--map-stop',
   hub: '--map-hub',
   halo: '--map-halo',
+  land: '--map-land',
+  landStop: '--map-land-stop',
+  landOutline: '--map-land-outline',
+  atoll: '--map-atoll',
 };
 
 export function readMapColors(): MapColors {
