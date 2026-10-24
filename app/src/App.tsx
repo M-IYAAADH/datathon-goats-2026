@@ -43,6 +43,8 @@ export function App() {
   const [results, setResults] = useState<Journey[] | null>(null);
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [alt, setAlt] = useState<AltRoute | null>(null);
+  // Route picked from the disruption panel's alternatives; null = the default below.
+  const [scenarioRouteId, setScenarioRouteId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('plan');
   const { theme, toggle } = useTheme();
 
@@ -75,15 +77,24 @@ export function App() {
     setAlt(null);
   }
 
-  // The map draws only this route. A simulated cancellation shows the private-boat
-  // recovery (or the new best route), a chosen wait alternative shows that, else the selection.
+  function changeScenario(s: Scenario | null) {
+    setScenario(s);
+    setScenarioRouteId(null);
+  }
+
+  // After a simulated cancellation: the alternative picked in the panel, else the
+  // private-boat recovery, else the new best route.
+  const scenarioJourney = useMemo(() => {
+    if (!scenario) return null;
+    const r = scenario.result;
+    return r.after.find((j) => j.id === scenarioRouteId) ?? r.recovery[0] ?? r.newBest;
+  }, [scenario, scenarioRouteId]);
+
+  // The map draws only this route: the disruption route, a chosen wait alternative, else the selection.
   const shownRides = useMemo(() => {
-    if (scenario) {
-      const j = scenario.result.recovery[0] ?? scenario.result.newBest;
-      return j?.rides ?? NO_RIDES;
-    }
+    if (scenario) return scenarioJourney?.rides ?? NO_RIDES;
     return alt?.rides ?? results?.find((j) => j.id === selectedId)?.rides ?? NO_RIDES;
-  }, [results, selectedId, scenario, alt]);
+  }, [results, selectedId, scenario, scenarioJourney, alt]);
 
   const highlightLegIds = useMemo(
     () => shownRides.flatMap((r) => r.occurrences.map((o) => o.leg.id)),
@@ -185,7 +196,13 @@ export function App() {
               hidden={tab !== 'disruption'}
             >
               {ready ? (
-                <DisruptionPanel bundle={ready} query={query} onScenarioChange={setScenario} />
+                <DisruptionPanel
+                  bundle={ready}
+                  query={query}
+                  onScenarioChange={changeScenario}
+                  shownRouteId={scenarioJourney?.id ?? null}
+                  onShowRoute={setScenarioRouteId}
+                />
               ) : (
                 <p className="placeholder">Available once data has loaded.</p>
               )}

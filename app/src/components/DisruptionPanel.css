@@ -221,3 +221,26 @@
 .dp-note {
   color: var(--shift);
 }
+
+.dp-route {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+}
+
+.dp-route:hover {
+  border-color: var(--color-border);
+}
+
+.dp-route-shown,
+.dp-route-shown:hover {
+  border-color: var(--accent);
+}
+
+.dp-route:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
