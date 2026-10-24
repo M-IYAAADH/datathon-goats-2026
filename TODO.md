@@ -61,6 +61,16 @@ If you finish your lane, take any open task. Ask in the group chat before taking
 | [ ] | U7 | Polish: keyboard focus, labels not colour-only, empty states ("No journey found", "No alternative found in the data", "No safe shift"), "How this works" panel (FR-25) | all components | U6 | Tab through the whole demo flow with keyboard only |
 | [ ] | U8 (P2) | Census overlay on map: population and 65+ share on click; highlight islands that lose connection after a cancellation | `src/components/MapView.tsx`, `src/components/CensusCard.tsx` | U6 | Click an island shows numbers from `census.json` |
 
+### UI revamp (Member B, plan in docs/ui-revamp-plan.md)
+
+| Status | ID | Task | Files |
+|---|---|---|---|
+| [x] Member B 15:54 | UR0 | Foundation: theme tokens (light/dark), base, ui primitives, per-component CSS split | src/styles/*, component .css |
+| [~] Member B 15:54 | UR-A | Shell: header with theme toggle, banners, mobile Plan/Map tabs | App.tsx/.css, Header, Banner, MobileTabs, hooks/useTheme.ts |
+| [~] Member B 15:54 | UR-B | Planner form restyle and JourneyList | PlannerForm, JourneyList |
+| [~] Member B 15:54 | UR-C | Map theming, legend, keyboard-reachable stops | MapView, Legend |
+| [~] Member B 15:54 | UR-D | ESLint/Prettier tooling and How this works panel (FR-25) | package.json, eslint.config.js, .prettierrc, HowItWorks |
+
 ## 3. Data and docs lane (Lead)
 
 | Status | ID | Task | Needs | Done when |

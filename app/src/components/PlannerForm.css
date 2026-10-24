@@ -1,0 +1,60 @@
+/* PlannerForm */
+.planner-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  align-items: end;
+}
+
+
+.planner-form select,
+.planner-form input,
+.planner-form button {
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  min-width: 0;
+}
+
+.planner-form button {
+  cursor: pointer;
+}
+
+.planner-form button[type='submit'] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.planner-form button:disabled,
+.planner-form select:disabled,
+.planner-form input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid #f3b4b4;
+  border-radius: 6px;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+.journey-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+@media (max-width: 480px) {
+  .planner-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

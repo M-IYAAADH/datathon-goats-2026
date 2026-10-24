@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import './Banner.css';
 
 type BannerProps = {
   kind: 'info' | 'warning';

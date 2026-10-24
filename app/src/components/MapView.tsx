@@ -9,6 +9,7 @@ import {
 } from 'maplibre-gl';
 import type { Leg, Stop } from '../data/load';
 import { Legend, MAP_COLORS } from './Legend';
+import './MapView.css';
 
 export type MapConfig = { minDevices: number; minDays: number };
 

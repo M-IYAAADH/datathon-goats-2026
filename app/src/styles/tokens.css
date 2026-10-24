@@ -1,0 +1,160 @@
+/* Design tokens ("Lagoon"). Components use these, never raw hex values. */
+:root {
+  color-scheme: light;
+
+  --color-bg: #f3f5f4;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef2f1;
+  --color-border: #dde4e2;
+  --color-border-strong: #c3cecb;
+  --color-text: #0f1f24;
+  --color-text-muted: #44575c;
+  --color-text-subtle: #5f7276;
+  --color-on-primary: #ffffff;
+
+  --color-primary: #0b6e78;
+  --color-primary-hover: #095a62;
+  --color-primary-soft: #e2f2f3;
+  --color-focus: #0b6e78;
+
+  --color-safe: #17803d;
+  --color-safe-soft: #e6f4ea;
+  --color-possible: #9a5400;
+  --color-possible-soft: #fdf1dd;
+  --color-longwait: #b4430c;
+  --color-longwait-soft: #fce9df;
+  --color-danger: #b42318;
+  --color-danger-soft: #fdecea;
+  --color-info: #0b5d8a;
+  --color-info-soft: #e5f1f8;
+  --color-sample: #854a00;
+  --color-sample-soft: #fff1d6;
+
+  --map-water: #d7ebf0;
+  --map-official: #1d5fbf;
+  --map-inferred: #0f8a7e;
+  --map-highlight: #e69500;
+  --map-cancelled: #d0302a;
+  --map-stop: #0f1f24;
+  --map-hub: #0b6e78;
+  --map-halo: #ffffff;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+
+  --shadow-1: 0 1px 2px rgb(15 31 36 / 6%), 0 1px 3px rgb(15 31 36 / 8%);
+  --shadow-2: 0 4px 12px rgb(15 31 36 / 10%), 0 2px 4px rgb(15 31 36 / 6%);
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+
+  --header-h: 56px;
+  --tabbar-h: 60px;
+  --tap-min: 44px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --color-bg: #0d1517;
+    --color-surface: #142024;
+    --color-surface-2: #1a2a2f;
+    --color-border: #26383d;
+    --color-border-strong: #364c52;
+    --color-text: #e6eef0;
+    --color-text-muted: #a9babe;
+    --color-text-subtle: #8a9ca0;
+    --color-on-primary: #04262a;
+
+    --color-primary: #4cc3c9;
+    --color-primary-hover: #6fd2d7;
+    --color-primary-soft: #123a3e;
+    --color-focus: #6fd2d7;
+
+    --color-safe: #4ade80;
+    --color-safe-soft: #10301c;
+    --color-possible: #fbbf24;
+    --color-possible-soft: #3a2a08;
+    --color-longwait: #fb923c;
+    --color-longwait-soft: #3b1d0c;
+    --color-danger: #f87171;
+    --color-danger-soft: #3b1414;
+    --color-info: #60a5fa;
+    --color-info-soft: #0f2840;
+    --color-sample: #fcd34d;
+    --color-sample-soft: #3a2c06;
+
+    --map-water: #10262c;
+    --map-official: #6ea8ff;
+    --map-inferred: #3fd1c0;
+    --map-highlight: #fbbf24;
+    --map-cancelled: #f87171;
+    --map-stop: #e6eef0;
+    --map-hub: #4cc3c9;
+    --map-halo: #0d1517;
+
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 40%);
+    --shadow-2: 0 4px 12px rgb(0 0 0 / 45%);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #0d1517;
+  --color-surface: #142024;
+  --color-surface-2: #1a2a2f;
+  --color-border: #26383d;
+  --color-border-strong: #364c52;
+  --color-text: #e6eef0;
+  --color-text-muted: #a9babe;
+  --color-text-subtle: #8a9ca0;
+  --color-on-primary: #04262a;
+
+  --color-primary: #4cc3c9;
+  --color-primary-hover: #6fd2d7;
+  --color-primary-soft: #123a3e;
+  --color-focus: #6fd2d7;
+
+  --color-safe: #4ade80;
+  --color-safe-soft: #10301c;
+  --color-possible: #fbbf24;
+  --color-possible-soft: #3a2a08;
+  --color-longwait: #fb923c;
+  --color-longwait-soft: #3b1d0c;
+  --color-danger: #f87171;
+  --color-danger-soft: #3b1414;
+  --color-info: #60a5fa;
+  --color-info-soft: #0f2840;
+  --color-sample: #fcd34d;
+  --color-sample-soft: #3a2c06;
+
+  --map-water: #10262c;
+  --map-official: #6ea8ff;
+  --map-inferred: #3fd1c0;
+  --map-highlight: #fbbf24;
+  --map-cancelled: #f87171;
+  --map-stop: #e6eef0;
+  --map-hub: #4cc3c9;
+  --map-halo: #0d1517;
+
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 40%);
+  --shadow-2: 0 4px 12px rgb(0 0 0 / 45%);
+}

@@ -1,3 +1,4 @@
+import './Legend.css';
 // Kept in sync with the CSS variables in styles.css; MapLibre paint can't read CSS vars.
 export const MAP_COLORS = {
   background: '#dbeaf5',

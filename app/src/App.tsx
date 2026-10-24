@@ -4,6 +4,7 @@ import { MapView } from './components/MapView';
 import { PlannerForm } from './components/PlannerForm';
 import { loadBundle, type Bundle, type Leg, type Stop, type TimeRange } from './data/load';
 import { findJourneys, formatHHMM, type Journey, type JourneyQuery } from './data/planner';
+import './App.css';
 
 type LoadState =
   | { status: 'loading' }

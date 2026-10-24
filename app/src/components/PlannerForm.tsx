@@ -1,6 +1,7 @@
 import { useId, useMemo, useState, type FormEvent } from 'react';
 import type { Stop } from '../data/load';
 import { parseHHMM, type JourneyQuery } from '../data/planner';
+import './PlannerForm.css';
 
 type Props = {
   stops: Stop[];
