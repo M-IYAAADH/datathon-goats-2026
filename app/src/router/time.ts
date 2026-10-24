@@ -9,7 +9,8 @@ const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 export function dayNumber(date: string): number {
   const m = DATE_RE.exec(date);
   const ms = m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : NaN;
-  if (!m || new Date(ms).toISOString().slice(0, 10) !== date) throw new Error(`Invalid date "${date}", expected YYYY-MM-DD`);
+  if (!m || new Date(ms).toISOString().slice(0, 10) !== date)
+    throw new Error(`Invalid date "${date}", expected YYYY-MM-DD`);
   return ms / 86_400_000;
 }
 
@@ -39,7 +40,11 @@ export function formatClock(min: number): string {
 
 function runsOn(leg: Leg, serviceDate: string): boolean {
   // ISO dates compare correctly as strings.
-  return leg.validFrom <= serviceDate && serviceDate <= leg.validTo && leg.days.includes(weekday(serviceDate));
+  return (
+    leg.validFrom <= serviceDate &&
+    serviceDate <= leg.validTo &&
+    leg.days.includes(weekday(serviceDate))
+  );
 }
 
 /**
@@ -47,7 +52,11 @@ function runsOn(leg: Leg, serviceDate: string): boolean {
  * in minutes from 00:00 of `date`. Includes previous-day runs still under way after
  * midnight, so a 23:30 to 01:10 leg shows up on the next day's query.
  */
-export function expandOccurrences(legs: readonly Leg[], date: string, horizonHours: number): Occurrence[] {
+export function expandOccurrences(
+  legs: readonly Leg[],
+  date: string,
+  horizonHours: number,
+): Occurrence[] {
   const end = horizonHours * 60;
   const out: Occurrence[] = [];
   for (let i = -1; i * DAY < end; i++) {
