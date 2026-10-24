@@ -490,16 +490,14 @@ export function MapView({
     const text = [...new Set([land?.attribution, atolls?.attribution].filter(Boolean))].join(' | ');
     if (!map || !mapReady || !text) return;
     const control = new AttributionControl({ compact: true, customAttribution: text });
-    // The credit is long: on phones put it top-right (the legend is bottom-left) and
-    // start collapsed to the (i) button; tap to read it.
+    // The credit is long: start collapsed to the (i) button at every width (tap to read it),
+    // and on phones put it top-right since the legend is bottom-left.
     const narrow = map.getContainer().clientWidth < 600;
     map.addControl(control, narrow ? 'top-right' : 'bottom-right');
-    if (narrow) {
-      map
-        .getContainer()
-        .querySelector('.maplibregl-ctrl-attrib.maplibregl-compact')
-        ?.classList.remove('maplibregl-compact-show');
-    }
+    map
+      .getContainer()
+      .querySelector('.maplibregl-ctrl-attrib.maplibregl-compact')
+      ?.classList.remove('maplibregl-compact-show');
     return () => {
       map.removeControl(control);
     };
