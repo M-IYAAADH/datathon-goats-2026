@@ -1,3 +1,13 @@
-{ "timezone": "Indian/Maldives", "bufferOfficialMin": 5, "bufferInferredMin": 15,
-  "longWaitMin": 120, "maxTransfers": 2, "horizonHours": 48,
-  "shiftStepMin": 5, "maxShiftMin": 30, "minDevices": 3, "minDays": 8 }
+{
+ "timezone": "Indian/Maldives",
+ "bufferOfficialMin": 5,
+ "bufferInferredMin": 15,
+ "longWaitMin": 120,
+ "maxTransfers": 2,
+ "horizonHours": 48,
+ "shiftStepMin": 5,
+ "maxShiftMin": 30,
+ "minDevices": 3,
+ "minDays": 8,
+ "buildVersion": "2026-10-24T17:00+05:00"
+}
