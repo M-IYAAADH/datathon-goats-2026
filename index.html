@@ -1,0 +1,1499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Island Connectivity Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#111827; --ink2:#4b5563; --ink3:#6b7280; --line:#e5e7eb; --line2:#d1d5db;
+  --accent:#0f5ea8; --accent-soft:#e8f1fb;
+  --ferry:#2563eb; --speed:#0d9488; --obs:#ea580c; --cancel:#dc2626; --shift:#7c3aed;
+  --ok:#15803d; --ok-soft:#e7f6ec; --warn:#b45309; --warn-soft:#fdf3e2; --bad:#b91c1c; --bad-soft:#fdecec;
+  --grey:#9ca3af;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.45 Inter,system-ui,-apple-system,Segoe UI,sans-serif;display:flex;flex-direction:column;font-variant-numeric:tabular-nums}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:16px;margin:0;font-weight:700;letter-spacing:-.01em}
+header .sub{color:var(--ink3);font-size:12.5px}
+header .spacer{flex:1}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:#eef0f3;color:var(--ink2);white-space:nowrap}
+.badge.sample{background:var(--warn-soft);color:var(--warn)}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.bad{background:var(--bad-soft);color:var(--bad)}
+.badge.warn{background:var(--warn-soft);color:var(--warn)}
+.badge.info{background:var(--accent-soft);color:var(--accent)}
+button{font:inherit;cursor:pointer;border:1px solid var(--line2);background:#fff;color:var(--ink);padding:6px 12px;border-radius:7px}
+button:hover{background:#f3f4f6}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button.primary:hover{background:#0c4f8e}
+button.small{padding:3px 8px;font-size:12px}
+button.link{border:none;background:none;color:var(--accent);padding:0;text-decoration:underline}
+main{flex:1;display:grid;grid-template-columns:460px 1fr;min-height:0}
+#panel{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+nav.tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto;flex-shrink:0}
+nav.tabs button{border:none;border-radius:0;background:none;padding:10px 12px;color:var(--ink3);font-weight:600;font-size:12.5px;white-space:nowrap;border-bottom:2px solid transparent}
+nav.tabs button.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tabbody{overflow-y:auto;flex:1;padding:14px 16px 32px}
+section[data-tab]{display:none}
+section[data-tab].active{display:block}
+h2{font-size:15px;margin:0 0 4px}
+h3{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3);margin:18px 0 8px;font-weight:600}
+p.lead{color:var(--ink2);margin:0 0 12px;font-size:12.5px}
+.muted{color:var(--ink3)}
+.small{font-size:12px}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:600;color:var(--ink2);flex:1;min-width:0}
+select,input[type=date],input[type=time],input[type=number]{font:inherit;font-weight:400;color:var(--ink);padding:6px 8px;border:1px solid var(--line2);border-radius:7px;background:#fff;width:100%;min-width:0}
+.row{display:flex;gap:8px;align-items:flex-end;margin-bottom:10px}
+.checks{display:flex;flex-wrap:wrap;gap:6px 14px;margin:4px 0 10px;font-size:12.5px}
+.checks label{display:flex;align-items:center;gap:5px;cursor:pointer}
+.swatch{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle}
+.swatch.dash{background:repeating-linear-gradient(90deg,var(--obs) 0 4px,transparent 4px 7px)!important}
+.note{border-left:3px solid var(--warn);background:var(--warn-soft);padding:8px 10px;border-radius:0 6px 6px 0;font-size:12px;color:#7c4a03;margin:10px 0}
+.note.info{border-color:var(--accent);background:var(--accent-soft);color:#0b3f70}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.card{border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:#fff}
+.card .k{font-size:11px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.card .v{font-size:20px;font-weight:700;margin-top:2px;letter-spacing:-.01em}
+.card .s{font-size:11.5px;color:var(--ink2)}
+.card.bad{border-color:#f3c4c4;background:#fffafa}
+.card.grey{border-style:dashed}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-size:11px;color:var(--ink3);font-weight:600;padding:6px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:6px 6px;border-bottom:1px solid #f0f1f3;vertical-align:top}
+tr.click{cursor:pointer}
+tr.click:hover td{background:#f8fafc}
+tr.sel td{background:var(--accent-soft)!important}
+td.num,th.num{text-align:right}
+.opt{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;cursor:pointer;background:#fff}
+.opt.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.opt-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.opt-head .t{font-size:15px;font-weight:700}
+.opt-head .d{color:var(--ink2);font-size:12.5px}
+.opt-head .spacer{flex:1}
+ol.legs{list-style:none;margin:8px 0 0;padding:0}
+li.leg{display:flex;gap:8px;padding:6px 0 6px 10px;border-left:3px solid var(--ferry);margin:2px 0}
+li.leg.k-speedboat_verified{border-left-color:var(--speed)}
+li.leg.k-observed{border-left:3px dashed var(--obs)}
+li.leg .mode{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ferry);width:70px;flex-shrink:0;padding-top:2px}
+li.leg.k-speedboat_verified .mode{color:var(--speed)}
+li.leg.k-observed .mode{color:var(--obs)}
+.leg-sub{color:var(--ink2);font-size:12px}
+.leg-meta{color:var(--ink3);font-size:11.5px;margin-top:2px}
+li.xfer{font-size:12px;color:var(--ink2);padding:3px 0 3px 13px;margin-left:0;border-left:3px dotted var(--line2)}
+li.xfer.long{color:var(--warn);font-weight:600}
+.ret{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:12px}
+.days{display:flex;gap:4px;margin:4px 0}
+.days span{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:#f1f2f4;color:var(--ink3);position:relative}
+.days span.on{background:var(--accent);color:#fff}
+.days span.sd::after{content:"";position:absolute;bottom:2px;width:5px;height:5px;border-radius:50%;background:#fff}
+.bar{height:7px;background:#eef0f3;border-radius:4px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent)}
+.comp{display:grid;grid-template-columns:120px 1fr 44px;gap:8px;align-items:center;font-size:12px;margin:5px 0}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.detail{border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0;background:#fff}
+.detail h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.slider{display:grid;grid-template-columns:120px 1fr 28px;gap:8px;align-items:center;font-size:12px;margin:3px 0}
+.slider input{width:100%}
+details{margin:8px 0}
+details>summary{cursor:pointer;font-weight:600;font-size:12.5px;color:var(--ink2);padding:4px 0}
+.chips{display:flex;flex-direction:column;gap:5px;margin:8px 0}
+.chip{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:7px;padding:5px 8px;font-size:12px;background:#fff}
+.chip .x{margin-left:auto}
+.chip.cancel{border-left:3px solid var(--cancel)}
+.chip.delay{border-left:3px solid var(--warn)}
+.chip.prop{border-left:3px solid var(--shift)}
+.seg{display:flex;gap:10px;align-items:center;font-size:12.5px;margin-bottom:10px;flex-wrap:wrap}
+.seg label{display:flex;gap:4px;align-items:center;cursor:pointer}
+.hidden{display:none!important}
+#mapwrap{position:relative;min-height:0}
+#map{position:absolute;inset:0;background:#dfe9f0}
+.legend{background:rgba(255,255,255,.95);padding:8px 10px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.15);font:12px Inter,system-ui,sans-serif;color:var(--ink);max-width:240px}
+.legend b{display:block;margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink3)}
+.legend .li{display:flex;align-items:center;gap:7px;margin:3px 0}
+.legend .dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:1.5px solid rgba(0,0,0,.25)}
+.legend .dot.dashed{border:2px dashed #4b5563;background:#e5e7eb}
+.legend .ln{width:20px;height:0;border-top:3px solid;flex-shrink:0}
+.legend .ln.dashed{border-top-style:dashed}
+.lbl{background:transparent;border:none;box-shadow:none;font:600 11px Inter,system-ui,sans-serif;color:#1f2937;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;padding:0}
+.lbl::before{display:none}
+.hide-labels .lbl{display:none}
+.hide-minor .lbl.minor{display:none}
+.leaflet-popup-content{font:12.5px/1.45 Inter,system-ui,sans-serif;margin:10px 12px}
+.leaflet-popup-content b.t{font-size:13.5px}
+.pop-actions{display:flex;gap:6px;margin-top:8px}
+.modal{position:fixed;inset:0;background:rgba(17,24,39,.45);display:flex;align-items:center;justify-content:center;z-index:2000;padding:16px}
+.modal-box{background:#fff;border-radius:12px;max-width:820px;width:100%;max-height:90vh;overflow:auto;padding:18px 20px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.modal-box h2{font-size:17px}
+.modal-box table td,.modal-box table th{font-size:12px}
+code{font:12px ui-monospace,SFMono-Regular,Consolas,monospace;background:#f3f4f6;padding:1px 4px;border-radius:4px}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--grey);margin-right:4px}
+.status-dot.ok{background:var(--ok)}
+.status-dot.bad{background:var(--bad)}
+.spin{color:var(--ink3);font-style:italic}
+@media (max-width:860px){
+  main{grid-template-columns:1fr;grid-template-rows:46vh auto;overflow:auto}
+  #mapwrap{order:-1;min-height:46vh}
+  #panel{border-right:none;border-top:1px solid var(--line)}
+  .tabbody{overflow:visible}
+  header{padding:8px 16px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Island Connectivity Planner</h1>
+    <div class="sub" id="regionSub">Central region · Maldives · ferry and verified speedboat network</div>
+  </div>
+  <span class="badge sample" id="feedBadge">Sample data · illustrative only</span>
+  <div class="spacer"></div>
+  <button id="openData">Data sources</button>
+</header>
+
+<main>
+  <aside id="panel">
+    <nav class="tabs" id="tabs">
+      <button data-tab="planner" class="active">Journey planner</button>
+      <button data-tab="connectivity">Connectivity</button>
+      <button data-tab="disruption">Disruption</button>
+      <button data-tab="timetable">Timetable tool</button>
+      <button data-tab="observed">Observed network</button>
+    </nav>
+    <div class="tabbody">
+
+      <!-- 1. Journey planner -->
+      <section data-tab="planner" class="active">
+        <h2>Journey planner</h2>
+        <p class="lead">Published ferry and verified passenger-speedboat services. Click an island on the map to set it as origin or destination.</p>
+        <div class="row">
+          <label class="f">From<select id="pOrigin"></select></label>
+          <button id="pSwap" title="Swap origin and destination" aria-label="Swap">⇄</button>
+          <label class="f">To<select id="pDest"></select></label>
+        </div>
+        <div class="row">
+          <label class="f">Travel date<input type="date" id="pDate"></label>
+          <label class="f">Depart after<input type="time" id="pTime" value="06:00"></label>
+          <label class="f">Time at destination<select id="pStay">
+            <option value="60">1 h</option><option value="120" selected>2 h</option><option value="180">3 h</option><option value="240">4 h</option>
+          </select></label>
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" id="mFerry" checked><span class="swatch" style="background:var(--ferry)"></span>Ferry</label>
+          <label><input type="checkbox" id="mSpeed" checked><span class="swatch" style="background:var(--speed)"></span>Verified speedboat</label>
+          <label><input type="checkbox" id="mObs"><span class="swatch dash"></span>Observed GPS crossings (unverified)</label>
+        </div>
+        <div id="pResults"></div>
+        <h3>Sources</h3>
+        <div id="pSources" class="small muted"></div>
+      </section>
+
+      <!-- 2. Connectivity -->
+      <section data-tab="connectivity">
+        <h2>Island connectivity</h2>
+        <p class="lead">Weekly access to <span class="hubName">Malé</span> and healthcare from each island. Click an island for its breakdown.</p>
+        <div class="row">
+          <label class="f">Analysis week containing<input type="date" id="cDate"></label>
+          <label class="f">"Poor" below index<select id="cThresh">
+            <option>30</option><option>40</option><option selected>50</option><option>60</option>
+          </select></label>
+        </div>
+        <div class="cards" id="cCards"></div>
+        <div id="cDetail"></div>
+        <details>
+          <summary>Index weights and healthcare destinations</summary>
+          <div id="cWeights"></div>
+          <h3>Healthcare destinations counted</h3>
+          <div class="checks" id="cHealth"></div>
+          <div class="checks"><label><input type="checkbox" id="cObs">Count observed GPS crossings as services (not recommended)</label></div>
+          <p class="small muted">Each component is scaled 0–1: service days ÷ 7; time to <span class="hubName">Malé</span> and to healthcare scaled linearly (0 h → 1, 8 h or more → 0); transfers (0 → 1, 3+ → 0); same-day return days ÷ 7. Index = weighted mean × 100.</p>
+        </details>
+        <h3>All islands</h3>
+        <table id="cTable"></table>
+      </section>
+
+      <!-- 3. Disruption -->
+      <section data-tab="disruption">
+        <h2>Disruption simulator</h2>
+        <div class="note">Scenario tool only: it does not announce or reflect actual cancellations.</div>
+        <div class="row">
+          <label class="f">Scenario date<input type="date" id="dDate"></label>
+        </div>
+        <div class="row">
+          <label class="f">Service<select id="dRoute"></select></label>
+        </div>
+        <div class="row">
+          <label class="f">Trip<select id="dTrip"></select></label>
+        </div>
+        <div class="seg">
+          <label><input type="radio" name="dAct" value="cancel" checked>Cancel</label>
+          <label><input type="radio" name="dAct" value="delay">Delay by</label>
+          <select id="dDelay" style="width:auto">
+            <option>15</option><option selected>30</option><option>45</option><option>60</option><option>90</option><option>120</option>
+          </select><span class="small muted">min</span>
+          <div class="spacer" style="flex:1"></div>
+          <button id="dAdd" class="primary">Add to scenario</button>
+        </div>
+        <div id="dList"></div>
+        <div id="dResults"></div>
+      </section>
+
+      <!-- 4. Timetable improvement -->
+      <section data-tab="timetable">
+        <h2>Timetable improvement tool</h2>
+        <p class="lead">Tests small shifts to individual trips on the scenario date and ranks them by connections restored, connections lost and access gained. Access improvement = shorter journeys to and from the hub, weighted by residents.</p>
+        <div class="note info">Proposals only update the scenario for comparison. Nothing changes in the real timetable.</div>
+        <div id="tContext" class="small"></div>
+        <div class="row" style="margin-top:10px">
+          <label class="f">Search window<select id="tRange">
+            <option value="10">± 10 min</option><option value="15">± 15 min</option><option value="30" selected>± 30 min</option><option value="60">± 60 min</option>
+          </select></label>
+          <button id="tRun" class="primary">Find adjustments</button>
+        </div>
+        <div id="tStatus"></div>
+        <div id="tTable"></div>
+        <div id="tApplied"></div>
+        <div id="tCompare"></div>
+      </section>
+
+      <!-- 5. Observed network -->
+      <section data-tab="observed">
+        <h2>Observed marine network</h2>
+        <p class="lead">Harbour-to-harbour crossings detected in FollowMe GPS tracks. Tracked vessels include cargo, fishing, resort and private boats, so these are <b>not</b> public transport services.</p>
+        <div class="row">
+          <label class="f">Min. crossings<select id="oMin">
+            <option>1</option><option selected>5</option><option>10</option><option>25</option><option>50</option>
+          </select></label>
+          <label class="f">Days needed for a recurring pattern<select id="oDays">
+            <option>3</option><option selected>5</option><option>10</option><option>15</option>
+          </select></label>
+        </div>
+        <div class="checks"><label><input type="checkbox" id="oMissing">Only crossings missing from published schedules</label></div>
+        <div class="cards" id="oCards"></div>
+        <h3>Crossings</h3>
+        <table id="oTable"></table>
+        <h3>Coverage gaps</h3>
+        <div id="oGaps" class="small"></div>
+      </section>
+    </div>
+  </aside>
+  <div id="mapwrap"><div id="map"></div></div>
+</main>
+
+<!-- Data modal -->
+<div class="modal hidden" id="dataModal">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;gap:10px">
+      <h2 style="margin:0">Data sources</h2>
+      <div style="flex:1"></div>
+      <button id="closeData">Close</button>
+    </div>
+    <p class="lead" style="margin-top:8px">Load a GTFS feed (individual <code>.txt</code> files or a <code>.zip</code>) plus the two CSV extensions below. Loading files replaces the sample data entirely. When the page is served over HTTP, files in a <code>data/</code> folder next to it load automatically.</p>
+    <div class="row">
+      <input type="file" id="fileInput" multiple accept=".txt,.csv,.zip" style="flex:1">
+      <button id="useSample">Use sample data</button>
+    </div>
+    <div id="loadMsg" class="small"></div>
+    <h3>Files</h3>
+    <table id="fileTable"></table>
+    <h3>Notes</h3>
+    <ul class="small" style="padding-left:18px;color:var(--ink2)">
+      <li>Stops with a <code>parent_station</code> are merged into that island. Otherwise each <code>stop_id</code> is treated as one island harbour, and <code>islands.csv</code> and <code>crossings.csv</code> must use the same IDs.</li>
+      <li><code>routes.txt</code> takes extra columns: <code>service_class</code> (<code>ferry</code>, <code>speedboat_verified</code> or <code>speedboat_unverified</code>), <code>source</code>, <code>source_date</code>, <code>uncertainty</code>. Unverified speedboats are excluded from all calculations.</li>
+      <li>Route lines are drawn straight between consecutive stops (<code>shapes.txt</code> is not used).</li>
+      <li>Minimum transfer time is 10 min. A transfer counts as a connection when the wait is 10–120 min.</li>
+    </ul>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+'use strict';
+/* ============================================================
+   Constants & helpers
+   ============================================================ */
+const TRANSFER = 10;      // min transfer time (min)
+const MAXWAIT = 120;      // max wait for a transfer to count as a connection
+const HF_TRIPS = 20;      // routes with more trips/day are treated as shuttles
+const MIN_TURN = 15;      // vessel turnaround check
+const DAY = 1440;
+const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const COMP = [
+  ['freq','Service days'],['time','Time to hub'],['transfers','Transfers'],['health','Healthcare access'],['sameday','Same-day return']
+];
+const IDX_COLORS = ['#991b1b','#ef4444','#f59e0b','#60a5fa','#1d4ed8'];
+const KIND_COLOR = {ferry:'#2563eb', speedboat_verified:'#0d9488', observed:'#ea580c'};
+const KIND_LABEL = {ferry:'Ferry', speedboat_verified:'Speedboat', observed:'Observed'};
+const HEALTH_LABEL = {regional_hospital:'Regional hospital', hospital:'Hospital', atoll_hospital:'Atoll hospital', health_centre:'Health centre'};
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const pad = n => String(n).padStart(2,'0');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtN = n => (n ?? 0).toLocaleString('en-US');
+const clamp01 = v => Math.max(0, Math.min(1, v));
+function toMin(s){ if(!s) return null; const p = String(s).trim().split(':').map(Number); return p[0]*60 + (p[1]||0); }
+function hhmmss(m){ return `${pad(Math.floor(m/60))}:${pad(m%60)}:00`; }
+function fmtClock(m){
+  if(m==null || !isFinite(m)) return '—';
+  const d = Math.floor(m/DAY), r = m - d*DAY;
+  return `${pad(Math.floor(r/60))}:${pad(r%60)}` + (d>0 ? ` <span class="muted">+${d}d</span>` : '');
+}
+function fmtDur(m){
+  if(m==null || !isFinite(m)) return '—';
+  m = Math.round(m); const h = Math.floor(m/60), mi = m%60;
+  return h ? `${h}h ${pad(mi)}m` : `${mi} min`;
+}
+function hav(a,b){
+  const R=6371, r=Math.PI/180, dl=(b[0]-a[0])*r, dn=(b[1]-a[1])*r;
+  const x = Math.sin(dl/2)**2 + Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dn/2)**2;
+  return 2*R*Math.asin(Math.sqrt(x));
+}
+function parseDate(ds){ const [y,m,d] = ds.split('-').map(Number); return new Date(Date.UTC(y,m-1,d)); }
+function fmtDateISO(dt){ return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth()+1)}-${pad(dt.getUTCDate())}`; }
+function addDays(ds,n){ const d = parseDate(ds); d.setUTCDate(d.getUTCDate()+n); return fmtDateISO(d); }
+function weekday(ds){ return (parseDate(ds).getUTCDay()+6)%7; }
+function ymd(ds){ return +ds.replaceAll('-',''); }
+function niceDate(ds){ return parseDate(ds).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}); }
+function idxColor(v){ return IDX_COLORS[Math.min(4, Math.floor(v/20))]; }
+
+/* ============================================================
+   Sample data (illustrative only; replaced when real files load)
+   ============================================================ */
+function buildSample(){
+  // id, name, atoll, lat, lon, population, 65+, disability, health facility, timetable evidence, gps coverage
+  const isl = [
+    ['MLE','Malé','Kaafu',4.1755,73.5093,133000,6900,3100,'regional_hospital','good',0.95],
+    ['HUL','Hulhumalé','Kaafu',4.2115,73.5405,62000,2100,1300,'hospital','good',0.95],
+    ['VIL','Vilimalé','Kaafu',4.1725,73.4855,7400,420,190,'health_centre','good',0.95],
+    ['GUL','Gulhi','Kaafu',3.9905,73.5070,1100,70,30,'health_centre','good',0.85],
+    ['MAA','Maafushi','Kaafu',3.9425,73.4905,3300,160,80,'health_centre','good',0.9],
+    ['GUR','Guraidhoo','Kaafu',3.9010,73.4705,1900,130,60,'health_centre','good',0.85],
+    ['HIM','Himmafushi','Kaafu',4.3085,73.5705,1300,80,35,'health_centre','good',0.85],
+    ['HUR','Huraa','Kaafu',4.3345,73.6010,1200,75,30,'health_centre','good',0.8],
+    ['THU','Thulusdhoo','Kaafu',4.3745,73.6505,1500,95,40,'health_centre','good',0.8],
+    ['DHF','Dhiffushi','Kaafu',4.4415,73.7135,1200,85,35,'health_centre','good',0.75],
+    ['GAA','Gaafaru','Kaafu',4.7395,73.5010,1100,90,40,'health_centre','limited',0.55],
+    ['KAA','Kaashidhoo','Kaafu',4.9575,73.4600,2000,150,70,'health_centre','good',0.6],
+    ['RAS','Rasdhoo','Alif Alif',4.2630,72.9920,1100,80,35,'atoll_hospital','good',0.8],
+    ['UKU','Ukulhas','Alif Alif',4.2150,72.8640,1000,65,30,'health_centre','good',0.75],
+    ['THO','Thoddoo','Alif Alif',4.4380,72.9600,1700,120,50,'health_centre','good',0.7],
+    ['MAT','Mathiveri','Alif Alif',4.1920,72.7460,800,60,25,'health_centre','limited',0.6],
+    ['MAH','Mahibadhoo','Alif Dhaal',3.7570,72.9690,2200,140,60,'atoll_hospital','good',0.75],
+    ['OMA','Omadhoo','Alif Dhaal',3.7880,72.9590,900,70,30,'health_centre','good',0.7],
+    ['DHA','Dhangethi','Alif Dhaal',3.6070,72.9550,1200,85,35,'health_centre','good',0.7],
+    ['DHG','Dhigurah','Alif Dhaal',3.5270,72.9260,700,50,20,'health_centre','good',0.65],
+    ['MAM','Maamigili','Alif Dhaal',3.4730,72.8360,2700,170,70,'health_centre','good',0.7],
+    ['FEN','Fenfushi','Alif Dhaal',3.4900,72.7830,800,60,30,'health_centre','limited',0.5],
+    ['FUL','Fulidhoo','Vaavu',3.6800,73.4170,400,30,15,'health_centre','good',0.75],
+    ['FEL','Felidhoo','Vaavu',3.4710,73.5470,600,45,20,'atoll_hospital','good',0.6],
+    ['KEY','Keyodhoo','Vaavu',3.4580,73.5540,700,50,20,'health_centre','good',0.55],
+    ['THV','Thinadhoo','Vaavu',3.4880,73.5330,200,20,10,'health_centre','none',0.3],
+    ['RAK','Rakeedhoo','Vaavu',3.3150,73.4720,350,30,15,'health_centre','limited',0.4],
+  ];
+  const pos = Object.fromEntries(isl.map(i => [i[0], [i[3], i[4]]]));
+  const svc = {
+    DAILY:[1,1,1,1,1,1,1], NOFRI:[1,1,1,1,0,1,1], SUN_TUE_THU:[0,1,0,1,0,0,1], MON_WED_SAT:[1,0,1,0,0,1,0],
+    SUN_WED:[0,0,1,0,0,0,1], MON_THU:[1,0,0,1,0,0,0], SAT_TUE_THU:[0,1,0,1,0,1,0],
+  };
+  const agency = [
+    {agency_id:'PF', agency_name:'Public ferry operator (sample)', agency_url:'https://example.org', agency_timezone:'Indian/Maldives'},
+    {agency_id:'SB', agency_name:'Speedboat operators (sample)', agency_url:'https://example.org', agency_timezone:'Indian/Maldives'},
+  ];
+  const routes = [], trips = [], stopTimes = [];
+  function route(id, name, cls, ag){
+    const ferry = cls === 'ferry';
+    routes.push({route_id:id, agency_id:ag, route_short_name:id, route_long_name:name, route_type:4, service_class:cls,
+      source: ferry ? 'Sample public ferry timetable (illustrative)' : cls==='speedboat_verified' ? 'Sample operator schedule, phone-verified (illustrative)' : 'Unverified listing (illustrative)',
+      source_date:'2025-08-01',
+      uncertainty: ferry ? '±20 min; weather-dependent' : 'Operator may change times at short notice'});
+  }
+  function trip(rid, service, seq, dep, kmh, dwell=10){
+    const tid = `${rid}_${dep.replace(':','')}_${seq[0]}_${service}`;
+    let t = toMin(dep);
+    seq.forEach((s,i) => {
+      if(i>0){ const km = hav(pos[seq[i-1]], pos[s]) * 1.25; t += Math.max(10, Math.round(km/kmh*60/5)*5); }
+      const arr = t, d = (i===0 || i===seq.length-1) ? t : t + dwell;
+      stopTimes.push({trip_id:tid, arrival_time:hhmmss(arr), departure_time:hhmmss(d), stop_id:s, stop_sequence:i+1});
+      t = d;
+    });
+    trips.push({route_id:rid, service_id:service, trip_id:tid, trip_headsign:isl.find(x=>x[0]===seq.at(-1))[1]});
+  }
+  const F=18, SPD=45;
+  route('F301','Malé – Vilimalé shuttle','ferry','PF');
+  route('F302','Malé – Hulhumalé shuttle','ferry','PF');
+  for(let m=360; m<=1380; m+=30){
+    const h = `${pad(Math.floor(m/60))}:${pad(m%60)}`, h2 = `${pad(Math.floor((m+15)/60))}:${pad((m+15)%60)}`;
+    trip('F301','DAILY',['MLE','VIL'],h,F); trip('F301','DAILY',['VIL','MLE'],h2,F);
+    trip('F302','DAILY',['MLE','HUL'],h,F); trip('F302','DAILY',['HUL','MLE'],h2,F);
+  }
+  route('F310','Malé – Gulhi – Maafushi – Guraidhoo','ferry','PF');
+  trip('F310','NOFRI',['MLE','GUL','MAA','GUR'],'15:00',F); trip('F310','NOFRI',['GUR','MAA','GUL','MLE'],'07:00',F);
+  route('F320','Malé – Himmafushi – Huraa – Thulusdhoo – Dhiffushi','ferry','PF');
+  trip('F320','NOFRI',['MLE','HIM','HUR','THU','DHF'],'15:00',F); trip('F320','NOFRI',['DHF','THU','HUR','HIM','MLE'],'07:00',F);
+  route('F330','Malé – Gaafaru – Kaashidhoo','ferry','PF');
+  trip('F330','SUN_TUE_THU',['MLE','GAA','KAA'],'09:00',F); trip('F330','MON_WED_SAT',['KAA','GAA','MLE'],'07:00',F);
+  route('F340','Malé – Rasdhoo – Ukulhas – Mathiveri','ferry','PF');
+  trip('F340','SUN_WED',['MLE','RAS','UKU','MAT'],'09:00',F); trip('F340','MON_THU',['MAT','UKU','RAS','MLE'],'07:00',F);
+  route('F341','Thoddoo – Rasdhoo','ferry','PF');
+  trip('F341','MON_WED_SAT',['THO','RAS'],'08:00',F); trip('F341','MON_WED_SAT',['RAS','THO'],'14:00',F);
+  route('F350','Alif Dhaal atoll ferry','ferry','PF');
+  trip('F350','NOFRI',['MAH','OMA','DHA','DHG','MAM','FEN'],'07:00',F); trip('F350','NOFRI',['FEN','MAM','DHG','DHA','OMA','MAH'],'13:30',F);
+  route('F360','Malé – Fulidhoo – Felidhoo – Keyodhoo – Rakeedhoo','ferry','PF');
+  trip('F360','SAT_TUE_THU',['MLE','FUL','FEL','KEY','RAK'],'10:00',F); trip('F360','SUN_WED',['RAK','KEY','FEL','FUL','MLE'],'07:00',F);
+  route('S410','Malé – Maafushi – Guraidhoo speedboat','speedboat_verified','SB');
+  trip('S410','DAILY',['MLE','MAA','GUR'],'10:00',SPD,5); trip('S410','DAILY',['MLE','MAA','GUR'],'16:30',SPD,5);
+  trip('S410','DAILY',['GUR','MAA','MLE'],'07:30',SPD,5); trip('S410','DAILY',['GUR','MAA','MLE'],'13:30',SPD,5);
+  route('S420','Malé – Rasdhoo – Ukulhas speedboat','speedboat_verified','SB');
+  trip('S420','DAILY',['MLE','RAS','UKU'],'10:00',SPD,5); trip('S420','DAILY',['MLE','RAS','UKU'],'16:00',SPD,5);
+  trip('S420','DAILY',['UKU','RAS','MLE'],'07:00',SPD,5); trip('S420','DAILY',['UKU','RAS','MLE'],'13:00',SPD,5);
+  route('S421','Malé – Thoddoo speedboat','speedboat_verified','SB');
+  trip('S421','NOFRI',['MLE','THO'],'15:00',SPD); trip('S421','NOFRI',['THO','MLE'],'07:30',SPD);
+  route('S430','Malé – Mahibadhoo – Dhangethi speedboat','speedboat_verified','SB');
+  trip('S430','DAILY',['MLE','MAH','DHA'],'15:30',SPD,5); trip('S430','DAILY',['DHA','MAH','MLE'],'07:00',SPD,5);
+  route('S440','Malé – Fulidhoo – Felidhoo speedboat','speedboat_verified','SB');
+  trip('S440','NOFRI',['MLE','FUL','FEL'],'16:00',SPD,5); trip('S440','NOFRI',['FEL','FUL','MLE'],'07:00',SPD,5);
+  route('S450','Malé – Huraa – Thulusdhoo – Dhiffushi speedboat','speedboat_verified','SB');
+  trip('S450','NOFRI',['MLE','HUR','THU','DHF'],'11:00',SPD,5); trip('S450','NOFRI',['DHF','THU','HUR','MLE'],'08:00',SPD,5);
+  route('S460','Malé – Gulhi speedboat','speedboat_unverified','SB');
+  trip('S460','DAILY',['MLE','GUL'],'12:00',SPD); trip('S460','DAILY',['GUL','MLE'],'13:00',SPD);
+
+  const calendar = Object.entries(svc).map(([id,d]) => ({service_id:id, monday:d[0], tuesday:d[1], wednesday:d[2], thursday:d[3], friday:d[4], saturday:d[5], sunday:d[6], start_date:'20250101', end_date:'20271231'}));
+  const stops = isl.map(i => ({stop_id:i[0], stop_name:i[1], stop_lat:i[3], stop_lon:i[4]}));
+  const islands = isl.map(i => ({stop_id:i[0], island_name:i[1], atoll:i[2], population:i[5], population_65plus:i[6], population_disability:i[7], health_facility:i[8], timetable_evidence:i[9], gps_coverage:i[10], is_hub:i[0]==='MLE'?1:0}));
+  const P = '2025-08-01/2025-08-31';
+  const cr = [
+    ['MLE','VIL',920,31,6,9,11,15,''],['VIL','MLE',915,31,6,9,11,15,''],
+    ['MLE','HUL',880,31,8,16,20,26,''],['HUL','MLE',870,31,8,16,20,27,''],
+    ['MLE','MAA',240,31,9,40,48,115,'10:00;15:00;16:30'],['MAA','MLE',236,31,9,40,47,120,'07:30;13:30'],
+    ['MAA','GUR',120,30,5,10,14,22,'11:00;17:30'],['GUR','MAA',118,30,5,10,14,22,'07:00;07:30;13:30'],
+    ['MLE','GUL',64,28,3,30,38,60,'12:00'],['GUL','MLE',62,28,3,30,37,55,'13:00'],
+    ['MLE','RAS',180,31,7,85,95,240,'09:00;10:00;16:00'],['RAS','MLE',175,31,7,85,96,235,'07:20;13:20'],
+    ['HUR','MLE',40,20,4,35,45,95,'08:30;15:30'],['MLE','HUR',38,19,4,35,46,95,'11:00;15:00'],
+    ['FUL','MAA',26,14,2,45,58,80,'08:00'],['MAA','FUL',24,13,2,45,60,85,'14:30'],
+    ['MAM','MLE',58,26,4,85,105,150,'06:30;15:00'],['MLE','MAM',55,25,4,85,100,145,'10:30;17:00'],
+    ['KAA','MLE',22,18,3,150,185,260,'06:00'],['MLE','KAA',21,17,3,150,190,270,'13:00'],
+    ['RAK','FEL',20,11,2,25,32,45,'07:30'],['FEL','RAK',19,11,2,25,33,50,'15:00'],
+    ['THV','FEL',30,16,3,4,6,10,'07:00;12:00'],['FEL','THV',29,16,3,4,6,10,'11:30;16:30'],
+    ['DHG','MAH',15,9,2,35,42,60,'07:30'],['MAH','DHG',14,9,2,35,44,60,'16:00'],
+    ['GAA','THU',8,6,1,70,85,110,'08:00'],['THU','GAA',7,5,1,70,90,120,'14:00'],
+    ['THO','UKU',6,4,1,40,50,70,'09:00'],['UKU','THO',5,3,1,40,52,75,'15:00'],
+  ];
+  const crossings = cr.map(c => ({from_harbour:c[0], to_harbour:c[1], n_crossings:c[2], n_days:c[3], n_vessels:c[4], duration_p10_min:c[5], duration_median_min:c[6], duration_p90_min:c[7], typical_departures:c[8], observation_period:P}));
+  const feed_info = [{feed_publisher_name:'Sample data (illustrative only)', feed_publisher_url:'https://example.org', feed_lang:'en', feed_start_date:'20250101', feed_end_date:'20271231', feed_version:'demo-0.1'}];
+  return {'agency.txt':agency,'stops.txt':stops,'routes.txt':routes,'trips.txt':trips,'stop_times.txt':stopTimes,'calendar.txt':calendar,'feed_info.txt':feed_info,'islands.csv':islands,'crossings.csv':crossings};
+}
+
+/* ============================================================
+   File schema (shown in the Data modal)
+   ============================================================ */
+const FILES = [
+  {name:'stops.txt', req:true, desc:'GTFS harbours', cols:'stop_id, stop_name, stop_lat, stop_lon, [parent_station]'},
+  {name:'routes.txt', req:true, desc:'GTFS routes + extensions', cols:'route_id, agency_id, route_short_name, route_long_name, route_type, service_class, source, source_date, uncertainty'},
+  {name:'trips.txt', req:true, desc:'GTFS trips', cols:'route_id, service_id, trip_id, [trip_headsign]'},
+  {name:'stop_times.txt', req:true, desc:'GTFS stop times', cols:'trip_id, arrival_time, departure_time, stop_id, stop_sequence'},
+  {name:'calendar.txt', req:true, desc:'GTFS weekly service (or calendar_dates.txt)', cols:'service_id, monday … sunday, start_date, end_date'},
+  {name:'calendar_dates.txt', req:false, desc:'GTFS exceptions', cols:'service_id, date, exception_type (1 add, 2 remove)'},
+  {name:'agency.txt', req:false, desc:'GTFS operators', cols:'agency_id, agency_name, …'},
+  {name:'feed_info.txt', req:false, desc:'Feed source and validity', cols:'feed_publisher_name, feed_start_date, feed_end_date, feed_version'},
+  {name:'islands.csv', req:false, desc:'Census and evidence per island', cols:'stop_id, island_name, atoll, population, population_65plus, population_disability, health_facility, timetable_evidence (good|limited|none), gps_coverage (0–1), is_hub'},
+  {name:'crossings.csv', req:false, desc:'FollowMe GPS crossings (directional)', cols:'from_harbour, to_harbour, n_crossings, n_days, n_vessels, duration_p10_min, duration_median_min, duration_p90_min, typical_departures ("HH:MM;HH:MM"), observation_period, [confidence]'},
+];
+
+/* ============================================================
+   Normalisation
+   ============================================================ */
+let RAW = null, NET = null, IS_SAMPLE = true;
+
+function normalize(raw){
+  const N = {islands:{}, routes:{}, trips:{}, tripList:[], cal:{}, calx:{}, crossings:[], feed:(raw['feed_info.txt']||[])[0]||{}, agencies:{}, warnings:[], hub:null};
+  (raw['agency.txt']||[]).forEach(a => N.agencies[a.agency_id||'_'] = a);
+  const parentOf = {};
+  const stops = raw['stops.txt']||[];
+  stops.forEach(s => { const p = (s.parent_station||'').trim(); parentOf[s.stop_id] = p || s.stop_id; });
+  stops.forEach(s => {
+    const id = parentOf[s.stop_id];
+    if(N.islands[id]) return;
+    const src = stops.find(x => x.stop_id === id) || s;
+    N.islands[id] = {id, name:src.stop_name||id, lat:+src.stop_lat, lon:+src.stop_lon, atoll:'', pop:0, p65:0, pdis:0, health:'', evidence:'unknown', gps:null, hub:false, hasCensus:false};
+  });
+  const res = id => parentOf[id] || id;
+  (raw['islands.csv']||[]).forEach(r => {
+    const i = N.islands[res(r.stop_id)];
+    if(!i){ N.warnings.push(`islands.csv: unknown stop_id ${r.stop_id}`); return; }
+    Object.assign(i, {
+      name: r.island_name || i.name, atoll: r.atoll || '', pop: +r.population||0, p65: +r.population_65plus||0, pdis: +r.population_disability||0,
+      health: (r.health_facility||'').trim(), evidence: (r.timetable_evidence||'unknown').trim().toLowerCase(),
+      gps: (r.gps_coverage===''||r.gps_coverage==null) ? null : +r.gps_coverage, hub: ['1','true','yes'].includes(String(r.is_hub).toLowerCase()), hasCensus:true,
+    });
+  });
+  const pub = N.feed.feed_publisher_name || '';
+  (raw['routes.txt']||[]).forEach(r => {
+    N.routes[r.route_id] = {id:r.route_id, short:r.route_short_name||r.route_id, long:r.route_long_name||'', cls:(r.service_class||'ferry').trim(),
+      agency:(N.agencies[r.agency_id]||{}).agency_name || r.agency_id || '', source:r.source||pub||'GTFS feed', sourceDate:r.source_date||'', uncertainty:r.uncertainty||''};
+  });
+  const dn = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+  (raw['calendar.txt']||[]).forEach(r => N.cal[r.service_id] = {days:dn.map(k => String(r[k])==='1'), start:+r.start_date, end:+r.end_date});
+  (raw['calendar_dates.txt']||[]).forEach(r => { (N.calx[r.service_id] ??= {})[+r.date] = +r.exception_type; });
+  (raw['trips.txt']||[]).forEach(r => {
+    const route = N.routes[r.route_id];
+    if(!route){ N.warnings.push(`trips.txt: unknown route ${r.route_id}`); return; }
+    N.trips[r.trip_id] = {id:r.trip_id, route, service:r.service_id, headsign:r.trip_headsign||'', stops:[]};
+  });
+  (raw['stop_times.txt']||[]).forEach(r => {
+    const t = N.trips[r.trip_id]; if(!t) return;
+    const a = toMin(r.arrival_time||r.departure_time), d = toMin(r.departure_time||r.arrival_time);
+    if(a==null) return;
+    t.stops.push({s:res(r.stop_id), arr:a, dep:d, seq:+r.stop_sequence});
+  });
+  N.tripList = Object.values(N.trips).filter(t => { t.stops.sort((a,b) => a.seq-b.seq); return t.stops.length >= 2; });
+  (raw['crossings.csv']||[]).forEach(r => {
+    const days = +r.n_days||0, vessels = +r.n_vessels||0;
+    N.crossings.push({from:res(r.from_harbour), to:res(r.to_harbour), n:+r.n_crossings||0, days, vessels,
+      p10:+r.duration_p10_min, med:+r.duration_median_min, p90:+r.duration_p90_min,
+      deps:(r.typical_departures||'').split(';').map(s=>s.trim()).filter(Boolean).map(toMin),
+      conf:(r.confidence||'').trim() || (days>=15 && vessels>=3 ? 'high' : days>=5 ? 'medium' : 'low'),
+      period:r.observation_period||''});
+  });
+  // hub
+  const hubs = Object.values(N.islands).filter(i => i.hub);
+  if(hubs.length) N.hub = hubs[0].id;
+  else if(N.islands.MLE) N.hub = 'MLE';
+  else { const c = {}; N.tripList.forEach(t => t.stops.forEach(s => c[s.s] = (c[s.s]||0)+1)); N.hub = Object.keys(c).sort((a,b)=>c[b]-c[a])[0]; }
+  // scheduled consecutive pairs (eligible classes) and observed counts per island
+  N.schedPairs = new Set();
+  N.tripList.forEach(t => { if(!['ferry','speedboat_verified'].includes(t.route.cls)) return;
+    for(let i=0;i<t.stops.length-1;i++) N.schedPairs.add([t.stops[i].s, t.stops[i+1].s].sort().join('|')); });
+  N.obsByIsland = {};
+  N.crossings.forEach(c => { N.obsByIsland[c.from] = (N.obsByIsland[c.from]||0)+c.n; N.obsByIsland[c.to] = (N.obsByIsland[c.to]||0)+c.n; });
+  N.calRange = (() => { const v = Object.values(N.cal); if(!v.length) return null; return [Math.min(...v.map(c=>c.start)), Math.max(...v.map(c=>c.end))]; })();
+  // islands within 8 km of hub get minor labels at low zoom
+  const h = N.islands[N.hub];
+  Object.values(N.islands).forEach(i => i.minor = h && i.id!==h.id && hav([i.lat,i.lon],[h.lat,h.lon]) < 8);
+  return N;
+}
+
+/* ============================================================
+   Service calendar & connections
+   ============================================================ */
+function active(sid, ds){
+  const d = ymd(ds), x = NET.calx[sid]?.[d];
+  if(x===1) return true; if(x===2) return false;
+  const c = NET.cal[sid]; if(!c) return false;
+  if(d < c.start || d > c.end) return false;
+  return c.days[weekday(ds)];
+}
+function eligible(t, o){ const c = t.route.cls; return c==='ferry' ? o.ferry : c==='speedboat_verified' ? o.speedboat : false; }
+
+const connCache = new Map();
+function scenKey(sc){ return sc ? JSON.stringify([[...sc.cancel].sort(), Object.entries(sc.shift).filter(e=>e[1]).sort()]) : ''; }
+function buildConns(ds, o, sc, useCache=true){
+  const key = `${ds}|${+o.ferry}${+o.speedboat}${+!!o.observed}|${o.minDays||0}|${scenKey(sc)}`;
+  if(useCache && connCache.has(key)) return connCache.get(key);
+  const conns = [];
+  for(const off of [0,1]){
+    const d = addDays(ds, off), base = off*DAY;
+    for(const t of NET.tripList){
+      if(!eligible(t,o) || !active(t.service,d)) continue;
+      if(sc && off===0 && sc.cancel.has(t.id)) continue;
+      const sh = (sc && off===0 && sc.shift[t.id]) || 0, tk = t.id+'@'+off, st = t.stops;
+      for(let i=0;i<st.length-1;i++) conns.push({dep:st[i].dep+sh+base, arr:st[i+1].arr+sh+base, from:st[i].s, to:st[i+1].s, tk, trip:t, kind:t.route.cls});
+    }
+    if(o.observed){
+      for(const c of NET.crossings){
+        if(c.days < (o.minDays||5) || !c.deps.length || !isFinite(c.med)) continue;
+        for(const t of c.deps) conns.push({dep:t+base, arr:t+c.med+base, from:c.from, to:c.to, tk:`obs:${c.from}-${c.to}-${t}@${off}`, trip:null, obs:c, kind:'observed'});
+      }
+    }
+  }
+  conns.sort((a,b) => a.dep-b.dep || a.arr-b.arr);
+  if(useCache){ if(connCache.size > 400) connCache.clear(); connCache.set(key, conns); }
+  return conns;
+}
+
+/* Connection Scan Algorithm: earliest arrival from origin departing at/after t0 */
+function csa(conns, origin, t0){
+  const arr = new Map([[origin,t0]]), ready = new Map([[origin,t0]]), enterOf = new Map(), J = new Map();
+  for(const c of conns){
+    if(c.dep < t0) continue;
+    let enter = enterOf.get(c.tk);
+    if(enter === undefined){
+      const r = ready.get(c.from);
+      if(r === undefined || r > c.dep) continue;
+      enter = c; enterOf.set(c.tk, c);
+    }
+    const cur = arr.get(c.to);
+    if(cur === undefined || c.arr < cur){ arr.set(c.to, c.arr); ready.set(c.to, c.arr + TRANSFER); J.set(c.to, {enter, exit:c}); }
+  }
+  return {arr, J, origin};
+}
+function reconstruct(r, dest){
+  if(!r.J.has(dest)) return null;
+  const legs = []; let s = dest, guard = 0;
+  while(s !== r.origin && guard++ < 30){
+    const j = r.J.get(s); if(!j) return null;
+    legs.unshift({from:j.enter.from, to:s, dep:j.enter.dep, arr:j.exit.arr, trip:j.enter.trip, obs:j.enter.obs, kind:j.enter.kind});
+    s = j.enter.from;
+  }
+  return legs;
+}
+function planOptions(conns, o, d, t0, max=4){
+  const out = []; let t = t0;
+  for(let k=0; k<16 && out.length<max; k++){
+    const legs = reconstruct(csa(conns,o,t), d); if(!legs) break;
+    const j = {legs, dep:legs[0].dep, arr:legs.at(-1).arr};
+    if(j.dep >= DAY && out.length) break;
+    if(out.length && out.at(-1).arr === j.arr) out[out.length-1] = j; else out.push(j);
+    t = j.dep + 1;
+  }
+  return out;
+}
+
+/* ============================================================
+   Per-island metrics for one day
+   ============================================================ */
+function makeCtx(conns, extra={}){
+  const health = new Set(Object.values(NET.islands).filter(i => S.conn.health.has(i.health)).map(i => i.id));
+  return {conns, hub:NET.hub, healthIds:health, minStay:S.minStay, inbound:csa(conns, NET.hub, 0), ...extra};
+}
+function islandDay(ctx, id, light=false){
+  const {conns, hub} = ctx;
+  let service = false; const deps = new Set();
+  for(const c of conns){ if(c.dep >= DAY) break; if(c.from===id || c.to===id) service = true; if(c.from===id) deps.add(c.dep); }
+  let best=null, bestLegs=null, health=null, healthDest=null;
+  const isH = !light && ctx.healthIds.has(id);
+  if(isH){ health = 0; healthDest = id; }
+  for(const t of deps){
+    const r = csa(conns, id, t);
+    if(id !== hub){ const a = r.arr.get(hub); if(a!=null && (best==null || a-t < best)){ best = a-t; bestLegs = light ? null : reconstruct(r, hub); } }
+    if(!light && !isH) for(const h of ctx.healthIds){ const a = r.arr.get(h); if(a!=null && (health==null || a-t < health)){ health = a-t; healthDest = h; } }
+  }
+  const outArr = id===hub ? 0 : (csa(conns,id,0).arr.get(hub) ?? null);
+  let sameDay = false, retArr = null;
+  if(id!==hub && outArr!=null && outArr < DAY){ retArr = csa(conns, hub, outArr+ctx.minStay).arr.get(id) ?? null; sameDay = retArr!=null && retArr <= DAY; }
+  const inArr = id===hub ? 0 : (ctx.inbound.arr.get(id) ?? null);
+  return {service, best, bestTr: bestLegs ? bestLegs.length-1 : null, bestLegs, health, healthDest, outArr, inArr, sameDay, retArr};
+}
+/* Shortest hub → island journey (departure to arrival) over all hub departures on day 0 */
+function hubBestIn(ctx){
+  if(ctx.hubBest) return ctx.hubBest;
+  const deps = new Set(), best = {};
+  for(const c of ctx.conns){ if(c.dep >= DAY) break; if(c.from===ctx.hub) deps.add(c.dep); }
+  for(const t of deps) for(const [id,a] of csa(ctx.conns, ctx.hub, t).arr){ if(id!==ctx.hub && (best[id]==null || a-t < best[id])) best[id] = a-t; }
+  return ctx.hubBest = best;
+}
+
+/* ============================================================
+   Weekly connectivity
+   ============================================================ */
+let weekCache = {key:null, data:null};
+function weekStart(ds){ return addDays(ds, -weekday(ds)); }
+function computeWeek(){
+  const mon = weekStart(S.conn.date);
+  const key = `${mon}|${S.conn.includeObs}|${[...S.conn.health].sort()}|${S.minStay}`;
+  if(weekCache.key === key) return weekCache.data;
+  const o = {ferry:true, speedboat:true, observed:S.conn.includeObs, minDays:S.obs.minDays};
+  const agg = {};
+  Object.keys(NET.islands).forEach(id => agg[id] = {days:[], sd:[], daysService:0, sameDayDays:0, best:null, bestTr:null, bestDay:null, bestLegs:null, bestDs:null, health:null, healthDest:null});
+  for(let d=0; d<7; d++){
+    const ds = addDays(mon, d), ctx = makeCtx(buildConns(ds, o, null));
+    for(const id in NET.islands){
+      const m = islandDay(ctx, id), a = agg[id];
+      a.days.push(m.service); a.sd.push(m.sameDay);
+      if(m.service) a.daysService++; if(m.sameDay) a.sameDayDays++;
+      if(m.best!=null && (a.best==null || m.best < a.best || (m.best===a.best && m.bestTr < a.bestTr))){ a.best = m.best; a.bestTr = m.bestTr; a.bestDay = d; a.bestLegs = m.bestLegs; a.bestDs = ds; }
+      if(m.health!=null && (a.health==null || m.health < a.health)){ a.health = m.health; a.healthDest = m.healthDest; }
+    }
+  }
+  weekCache = {key, data:{mon, agg}};
+  return weekCache.data;
+}
+function components(a){
+  return {
+    freq: a.daysService/7,
+    time: a.best==null ? 0 : clamp01(1 - a.best/480),
+    transfers: a.best==null ? 0 : 1 - Math.min(a.bestTr,3)/3,
+    health: a.health==null ? 0 : clamp01(1 - a.health/480),
+    sameday: a.sameDayDays/7,
+  };
+}
+function indexOf(a){
+  const c = components(a), w = S.conn.weights; let s=0, ws=0;
+  for(const [k] of COMP){ s += c[k]*w[k]; ws += w[k]; }
+  return ws ? 100*s/ws : 0;
+}
+function insufficient(i, a){
+  if(['limited','none','insufficient'].includes(i.evidence)) return true;
+  return a && a.daysService===0 && (NET.obsByIsland[i.id]||0) > 0;
+}
+
+/* ============================================================
+   Scenario (disruption + proposals)
+   ============================================================ */
+function scenarioObj(withProps=true){
+  const shift = {...S.scen.delay};
+  if(withProps) for(const [k,v] of Object.entries(S.scen.prop)) shift[k] = (shift[k]||0) + v;
+  return {cancel:new Set(S.scen.cancel), shift};
+}
+const freqCache = {};
+function routeFreq(ds){
+  if(freqCache[ds]) return freqCache[ds];
+  const f = {}; NET.tripList.forEach(t => { if(active(t.service,ds)) f[t.route.id] = (f[t.route.id]||0)+1; });
+  return freqCache[ds] = f;
+}
+/* Transfer connections: arrival of trip A at a stop feeding the first departure of route R (towards its next stop) within 10–120 min */
+function transferPairs(ds, sc){
+  const o = {ferry:true, speedboat:true}, freq = routeFreq(ds), arrs = {}, deps = {};
+  for(const t of NET.tripList){
+    if(!eligible(t,o) || !active(t.service,ds) || (sc && sc.cancel.has(t.id))) continue;
+    const sh = (sc && sc.shift[t.id]) || 0, st = t.stops;
+    for(let i=0;i<st.length;i++){
+      if(i>0) (arrs[st[i].s] ??= []).push({t, a:st[i].arr+sh, prev:st[i-1].s});
+      if(i<st.length-1) (deps[st[i].s] ??= []).push({t, d:st[i].dep+sh, next:st[i+1].s});
+    }
+  }
+  const out = new Map();
+  for(const s in arrs){
+    const D = (deps[s]||[]).sort((x,y) => x.d-y.d);
+    for(const A of arrs[s]){
+      const hfA = (freq[A.t.route.id]||0) > HF_TRIPS, lo = A.a + TRANSFER, hi = A.a + MAXWAIT;
+      // a shuttle feeds a departure if any of its trips does, so key it by route
+      const aKey = hfA ? `R:${A.t.route.id}:${A.prev}` : A.t.id;
+      let k = 0, h = D.length; while(k<h){ const m=(k+h)>>1; if(D[m].d < lo) k=m+1; else h=m; }
+      const seen = new Set();
+      for(; k<D.length && D[k].d<=hi; k++){
+        const B = D[k];
+        if(B.t.route.id===A.t.route.id || B.next===A.prev) continue;
+        if(hfA && (freq[B.t.route.id]||0) > HF_TRIPS) continue;
+        const g = B.t.route.id+':'+B.next; if(seen.has(g)) continue; seen.add(g);
+        const key = `${aKey}>${g}@${s}`;
+        if(!out.has(key)) out.set(key, {A:A.t, B:B.t, s, a:A.a, d:B.d, next:B.next});
+      }
+    }
+  }
+  return out;
+}
+function delta(a,b){ // minutes later in scenario; Infinity if lost within 48 h
+  if(a==null && b==null) return 0; if(a==null) return -Infinity; if(b==null) return Infinity; return b-a;
+}
+function runScenario(withProps=true){
+  const ds = S.scen.date, o = {ferry:true, speedboat:true};
+  const sc = scenarioObj(withProps);
+  const ctxB = makeCtx(buildConns(ds,o,null)), ctxS = makeCtx(buildConns(ds,o,sc));
+  const pB = transferPairs(ds,null), pS = transferPairs(ds,sc);
+  const lost = [...pB.entries()].filter(([k]) => !pS.has(k)).map(([k,v]) => ({key:k, ...v}));
+  const gained = [...pS.keys()].filter(k => !pB.has(k)).length;
+  // alternatives for lost connections
+  for(const L of lost){
+    if(sc.cancel.has(L.A.id)){ L.alt = 'feeder cancelled'; continue; }
+    const st = L.B.stops, k = st.findIndex((x,i) => x.s===L.s && st[i+1]?.s===L.next);
+    L.baseArr = k >= 0 ? st[k+1].arr : null;
+    const alt = csa(ctxS.conns, L.s, L.a + (sc.shift[L.A.id]||0) + TRANSFER).arr.get(L.next);
+    L.altArr = alt ?? null;
+    L.alt = alt==null ? 'none within 48 h' : null;
+  }
+  const islands = {}; let pop=0,p65=0,pdis=0; const affected=[], sdLost=[], svcLost=[];
+  for(const id in NET.islands){
+    if(id===NET.hub) continue;
+    const m0 = islandDay(ctxB,id,true), m1 = islandDay(ctxS,id,true);
+    const d = {
+      svcLost: m0.service && !m1.service, sdLost: m0.sameDay && !m1.sameDay, sdGain: !m0.sameDay && m1.sameDay,
+      out: delta(m0.outArr, m1.outArr), in: delta(m0.inArr, m1.inArr),
+      overnight: (m0.outArr!=null && m0.outArr<DAY && (m1.outArr==null || m1.outArr>=DAY)) || (m0.inArr!=null && m0.inArr<DAY && (m1.inArr==null || m1.inArr>=DAY)),
+    };
+    d.affected = d.svcLost || d.sdLost || d.out>0 || d.in>0 || d.overnight;
+    islands[id] = {m0, m1, d};
+    if(d.affected){ const i = NET.islands[id]; affected.push(id); pop+=i.pop; p65+=i.p65; pdis+=i.pdis; }
+    if(d.sdLost) sdLost.push(id); if(d.svcLost) svcLost.push(id);
+  }
+  return {ds, sc, lost, gained, pB, pS, islands, affected, sdLost, svcLost, pop, p65, pdis, ctxS};
+}
+
+/* ============================================================
+   State
+   ============================================================ */
+const S = {
+  tab:'planner', date:null, time:'06:00', origin:null, dest:null,
+  opts:{ferry:true, speedboat:true, observed:false}, minStay:120,
+  plan:null, selOpt:0,
+  conn:{date:null, weights:{freq:1,time:1,transfers:1,health:1,sameday:1}, health:new Set(['regional_hospital','hospital','atoll_hospital']), threshold:50, selected:null, includeObs:false, sort:'index'},
+  scen:{date:null, cancel:new Set(), delay:{}, prop:{}, propLog:[]},
+  scenRes:null, scenResNoProp:null, proposals:null,
+  obs:{minCount:5, onlyMissing:false, minDays:5},
+};
+
+/* ============================================================
+   Map
+   ============================================================ */
+const map = L.map('map', {zoomControl:true, attributionControl:true});
+// Esri light grey works from file:// (no key or referrer needed)
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+  attribution:'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors', maxZoom:16,
+}).addTo(map);
+const LY = {network:L.layerGroup().addTo(map), overlay:L.layerGroup().addTo(map), islands:L.layerGroup().addTo(map)};
+const legend = L.control({position:'bottomright'});
+legend.onAdd = () => L.DomUtil.create('div','legend');
+legend.addTo(map);
+const mapEl = $('#map');
+function updateLabelZoom(){ const z = map.getZoom(); mapEl.classList.toggle('hide-labels', z < 7); mapEl.classList.toggle('hide-minor', z < 11); }
+map.on('zoomend', updateLabelZoom);
+const ll = id => { const i = NET.islands[id]; return [i.lat, i.lon]; };
+function legStops(l){
+  if(!l.trip) return [l.from, l.to];
+  const st = l.trip.stops; const i = st.findIndex(x => x.s===l.from); let j = i+1; while(j<st.length && st[j].s!==l.to) j++;
+  return st.slice(i, j+1).map(x => x.s);
+}
+function tripLine(t, opts){ return L.polyline(t.stops.map(x => ll(x.s)), opts); }
+
+function drawNetwork(){
+  LY.network.clearLayers();
+  const seen = new Set();
+  for(const t of NET.tripList){
+    if(!['ferry','speedboat_verified'].includes(t.route.cls)) continue;
+    for(let i=0;i<t.stops.length-1;i++){
+      const k = [t.stops[i].s, t.stops[i+1].s].sort().join('|') + t.route.cls;
+      if(seen.has(k)) continue; seen.add(k);
+      L.polyline([ll(t.stops[i].s), ll(t.stops[i+1].s)], {color:KIND_COLOR[t.route.cls], weight:1.5, opacity:S.tab==='observed'?0.18:0.28, interactive:false}).addTo(LY.network);
+    }
+  }
+}
+function radius(i){ return Math.min(13, 4 + Math.sqrt(i.pop||0)/40); }
+function islandStyle(i){
+  const base = {radius:radius(i), color:'#374151', weight:1, fillColor:'#ffffff', fillOpacity:0.95, dashArray:null};
+  if(S.tab==='planner'){
+    if(i.id===S.origin) return {...base, fillColor:'#111827', color:'#111827', weight:2, radius:base.radius+2};
+    if(i.id===S.dest) return {...base, fillColor:'#0f5ea8', color:'#0f5ea8', weight:2, radius:base.radius+2};
+    if(i.id===NET.hub) return {...base, fillColor:'#e5e7eb'};
+    return base;
+  }
+  if(S.tab==='connectivity'){
+    if(i.id===NET.hub) return {...base, fillColor:'#111827', color:'#111827'};
+    const {agg} = computeWeek(), a = agg[i.id];
+    const sel = i.id===S.conn.selected ? {weight:3, color:'#111827'} : {};
+    if(insufficient(i,a)) return {...base, fillColor:'#e5e7eb', color:'#4b5563', weight:2, dashArray:'3 3', ...sel};
+    return {...base, fillColor:idxColor(indexOf(a)), ...sel};
+  }
+  if(S.tab==='disruption' || S.tab==='timetable'){
+    const R = S.scenRes; if(!R || i.id===NET.hub) return {...base, fillColor: i.id===NET.hub ? '#e5e7eb' : '#fff'};
+    const d = R.islands[i.id]?.d; if(!d) return base;
+    if(d.svcLost || d.sdLost || d.overnight) return {...base, fillColor:'#dc2626'};
+    if(d.affected) return {...base, fillColor:'#f59e0b'};
+    if(d.sdGain) return {...base, fillColor:'#16a34a'};
+    return base;
+  }
+  if(S.tab==='observed'){
+    if(i.gps==null) return {...base, fillColor:'#fff', color:'#9ca3af', dashArray:'2 3', weight:2};
+    if(i.gps < 0.6) return {...base, fillColor:'#e5e7eb', color:'#6b7280', dashArray:'3 3', weight:2};
+    return base;
+  }
+  return base;
+}
+function drawIslands(){
+  LY.islands.clearLayers();
+  for(const i of Object.values(NET.islands)){
+    if(!isFinite(i.lat)) continue;
+    const m = L.circleMarker([i.lat,i.lon], islandStyle(i));
+    m.bindTooltip(esc(i.name), {permanent:true, direction:'right', className:'lbl'+(i.minor?' minor':''), offset:[6,0]});
+    m.on('click', () => onIslandClick(i.id, m));
+    m.addTo(LY.islands);
+  }
+}
+function setLegend(html){ document.querySelector('.legend').innerHTML = html; }
+function drawOverlay(){
+  LY.overlay.clearLayers();
+  const T = S.tab;
+  if(T==='planner'){
+    setLegend(`<b>Journey</b>
+      <div class="li"><span class="ln" style="border-color:${KIND_COLOR.ferry}"></span>Ferry</div>
+      <div class="li"><span class="ln" style="border-color:${KIND_COLOR.speedboat_verified}"></span>Verified speedboat</div>
+      <div class="li"><span class="ln dashed" style="border-color:${KIND_COLOR.observed}"></span>Observed crossing (unverified)</div>
+      <div class="li"><span class="ln dashed" style="border-color:#6b7280;opacity:.6"></span>Same-day return</div>
+      <div class="li"><span class="dot" style="background:#111827"></span>Origin <span class="dot" style="background:#0f5ea8;margin-left:6px"></span>Destination</div>`);
+    const j = S.plan?.opts?.[S.selOpt]; if(!j) return;
+    const bounds = [];
+    const draw = (legs, ret) => legs.forEach(l => {
+      const pts = legStops(l).map(ll); bounds.push(...pts);
+      L.polyline(pts, {color:KIND_COLOR[l.kind], weight:ret?3:5, opacity:ret?0.55:0.9, dashArray: (l.kind==='observed'||ret) ? '8 7' : null}).addTo(LY.overlay);
+    });
+    draw(j.legs, false); if(j.ret?.possible) draw(j.ret.legs, true);
+    if(bounds.length) map.fitBounds(bounds, {padding:[60,60], maxZoom:11});
+  } else if(T==='connectivity'){
+    setLegend(`<b>Connectivity Index</b>
+      ${[[80,'80–100'],[60,'60–80'],[40,'40–60'],[20,'20–40'],[0,'0–20']].map(([v,l]) => `<div class="li"><span class="dot" style="background:${idxColor(v)}"></span>${l}</div>`).join('')}
+      <div class="li"><span class="dot dashed"></span>Insufficient timetable evidence</div>
+      <div class="li"><span class="dot" style="background:#111827"></span>Hub (${esc(NET.islands[NET.hub]?.name)})</div>`);
+    const a = S.conn.selected && computeWeek().agg[S.conn.selected];
+    if(a?.bestLegs) a.bestLegs.forEach(l => L.polyline(legStops(l).map(ll), {color:KIND_COLOR[l.kind], weight:4, opacity:0.85}).addTo(LY.overlay));
+  } else if(T==='disruption' || T==='timetable'){
+    setLegend(`<b>Scenario impact</b>
+      <div class="li"><span class="dot" style="background:#dc2626"></span>Loses service, same-day access or needs overnight</div>
+      <div class="li"><span class="dot" style="background:#f59e0b"></span>Longer waits</div>
+      <div class="li"><span class="dot" style="background:#16a34a"></span>Gains same-day access</div>
+      <div class="li"><span class="ln dashed" style="border-color:var(--cancel)"></span>Cancelled trip</div>
+      <div class="li"><span class="ln" style="border-color:#f59e0b"></span>Delayed trip</div>
+      <div class="li"><span class="ln" style="border-color:var(--shift)"></span>Proposed shift</div>`);
+    for(const id of S.scen.cancel){ const t = NET.trips[id]; if(t) tripLine(t, {color:'#dc2626', weight:4, dashArray:'8 6'}).addTo(LY.overlay); }
+    for(const id in S.scen.delay){ const t = NET.trips[id]; if(t) tripLine(t, {color:'#f59e0b', weight:4}).addTo(LY.overlay); }
+    for(const id in S.scen.prop){ const t = NET.trips[id]; if(t) tripLine(t, {color:'#7c3aed', weight:4, opacity:0.85}).addTo(LY.overlay); }
+  } else if(T==='observed'){
+    setLegend(`<b>Observed crossings</b>
+      <div class="li"><span class="ln" style="border-color:#1d4ed8"></span>High confidence</div>
+      <div class="li"><span class="ln" style="border-color:#60a5fa"></span>Medium</div>
+      <div class="li"><span class="ln" style="border-color:#cbd5e1"></span>Low</div>
+      <div class="li"><span class="ln dashed" style="border-color:#ea580c"></span>Not in published schedule</div>
+      <div class="li">Line width = crossings</div>
+      <div class="li"><span class="dot dashed"></span>Low GPS coverage</div>`);
+    for(const p of observedPairs()){
+      const conf = p.conf, col = p.inSched ? (conf==='high'?'#1d4ed8':conf==='medium'?'#60a5fa':'#cbd5e1') : '#ea580c';
+      const w = Math.max(2, Math.min(10, 1.2*Math.log2(p.n+1)));
+      L.polyline([ll(p.a), ll(p.b)], {color:col, weight:w, opacity:0.8, dashArray:p.inSched?null:'7 6'})
+        .bindTooltip(`${esc(NET.islands[p.a].name)} ↔ ${esc(NET.islands[p.b].name)}: ${fmtN(p.n)} crossings, ${p.days} days`, {sticky:true})
+        .addTo(LY.overlay);
+    }
+  }
+}
+function redrawMap(){ drawNetwork(); drawIslands(); drawOverlay(); }
+
+function onIslandClick(id, marker){
+  const i = NET.islands[id], T = S.tab;
+  if(T==='connectivity'){ S.conn.selected = id; renderConnectivity(); return; }
+  let html = `<b class="t">${esc(i.name)}</b><div class="muted">${esc(i.atoll)}${i.pop?` · ${fmtN(i.pop)} residents`:''}</div>`;
+  if(T==='planner'){
+    html += `<div class="pop-actions"><button class="small" data-act="origin" data-id="${esc(id)}">Set as origin</button><button class="small primary" data-act="dest" data-id="${esc(id)}">Set as destination</button></div>`;
+  } else if((T==='disruption'||T==='timetable') && S.scenRes?.islands[id]){
+    const {m0,m1,d} = S.scenRes.islands[id];
+    html += `<table style="margin-top:6px"><tr><th></th><th>Baseline</th><th>Scenario</th></tr>
+      <tr><td>Earliest at ${esc(NET.islands[NET.hub].name)}</td><td>${fmtClock(m0.outArr)}</td><td>${fmtClock(m1.outArr)}</td></tr>
+      <tr><td>Earliest arrival from ${esc(NET.islands[NET.hub].name)}</td><td>${fmtClock(m0.inArr)}</td><td>${fmtClock(m1.inArr)}</td></tr>
+      <tr><td>Same-day return</td><td>${m0.sameDay?'Yes':'No'}</td><td>${m1.sameDay?'Yes':'No'}</td></tr></table>
+      ${d.affected?'<div class="badge bad" style="margin-top:6px">Affected</div>':''}`;
+  } else if(T==='observed'){
+    const cs = NET.crossings.filter(c => c.from===id || c.to===id);
+    html += `<div style="margin-top:6px">GPS coverage: <b>${i.gps==null?'unknown':Math.round(i.gps*100)+'%'}</b></div>`;
+    html += cs.length ? `<div class="small" style="margin-top:4px">${cs.map(c => `${esc(NET.islands[c.from]?.name)} → ${esc(NET.islands[c.to]?.name)}: ${c.n}`).join('<br>')}</div>` : '<div class="muted small">No crossings detected.</div>';
+  }
+  L.popup({offset:[0,-4]}).setLatLng(marker.getLatLng()).setContent(html).openOn(map);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if(!b) return;
+  const act = b.dataset.act, id = b.dataset.id;
+  if(act==='origin'){ S.origin = id; $('#pOrigin').value = id; map.closePopup(); runPlanner(); }
+  if(act==='dest'){ S.dest = id; $('#pDest').value = id; map.closePopup(); runPlanner(); }
+});
+
+/* ============================================================
+   1. Journey planner
+   ============================================================ */
+function islandOptions(sel){
+  const byAtoll = {};
+  Object.values(NET.islands).sort((a,b) => a.name.localeCompare(b.name)).forEach(i => (byAtoll[i.atoll||'Other'] ??= []).push(i));
+  sel.innerHTML = '<option value="">Select island…</option>' + Object.keys(byAtoll).sort().map(a =>
+    `<optgroup label="${esc(a)}">${byAtoll[a].map(i => `<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('')}</optgroup>`).join('');
+}
+const nm = id => esc(NET.islands[id]?.name || id);
+function legHTML(l){
+  let sub, meta;
+  if(l.trip){
+    const r = l.trip.route;
+    sub = `${esc(r.short)} · ${esc(r.long)} · ${fmtDur(l.arr-l.dep)}`;
+    meta = `${esc(r.agency)} · Source: ${esc(r.source)}${r.sourceDate?` (${esc(r.sourceDate)})`:''}${r.uncertainty?` · Uncertainty: ${esc(r.uncertainty)}`:''}`;
+  } else {
+    const c = l.obs;
+    sub = `GPS-detected crossing · typical ${fmtDur(c.med)} (range ${c.p10}–${c.p90} min)`;
+    meta = `Observed connection: passenger service not verified. ${fmtN(c.n)} crossings on ${c.days} days${c.period?` (${esc(c.period)})`:''}; ${c.conf} confidence.`;
+  }
+  return `<li class="leg k-${l.kind}"><span class="mode">${KIND_LABEL[l.kind]}</span><div>
+    <div><b>${fmtClock(l.dep)}</b> ${nm(l.from)} → <b>${fmtClock(l.arr)}</b> ${nm(l.to)}</div>
+    <div class="leg-sub">${sub}</div><div class="leg-meta">${meta}</div></div></li>`;
+}
+function legsHTML(legs){
+  let h = '';
+  legs.forEach((l,k) => {
+    if(k>0){
+      const w = l.dep - legs[k-1].arr, night = Math.floor(l.dep/DAY) !== Math.floor(legs[k-1].arr/DAY) || w > 360;
+      h += `<li class="xfer${night?' long':''}">${night ? 'Overnight / long wait' : 'Transfer'} at ${nm(l.from)} · ${fmtDur(w)}</li>`;
+    }
+    h += legHTML(l);
+  });
+  return `<ol class="legs">${h}</ol>`;
+}
+function sameDayReturn(conns, j, o, d){
+  if(j.arr >= DAY) return {possible:false, reason:'Outbound arrives after midnight'};
+  const legs = reconstruct(csa(conns, d, j.arr + S.minStay), o);
+  if(legs && legs.at(-1).arr <= DAY) return {possible:true, legs, dep:legs[0].dep, arr:legs.at(-1).arr};
+  return {possible:false, reason: legs ? `Earliest return leaves ${fmtClock(legs[0].dep)}, arrives ${fmtClock(legs.at(-1).arr)}` : 'No return found within 48 h', legs};
+}
+function runPlanner(){
+  const el = $('#pResults'), o = S.origin, d = S.dest;
+  S.plan = null;
+  if(!o || !d){ el.innerHTML = '<p class="muted">Choose an origin and destination, or click islands on the map.</p>'; redrawMap(); return; }
+  if(o===d){ el.innerHTML = '<p class="muted">Origin and destination are the same island.</p>'; redrawMap(); return; }
+  if(!S.opts.ferry && !S.opts.speedboat && !S.opts.observed){ el.innerHTML = '<p class="muted">Select at least one mode.</p>'; redrawMap(); return; }
+  const conns = buildConns(S.date, {...S.opts, minDays:S.obs.minDays}, null);
+  const t0 = toMin(S.time) ?? 0;
+  const opts = planOptions(conns, o, d, t0);
+  opts.forEach(j => j.ret = sameDayReturn(conns, j, o, d));
+  S.plan = {opts, t0}; S.selOpt = 0;
+  renderPlanner();
+}
+function renderPlanner(){
+  const el = $('#pResults'), P = S.plan;
+  if(!P) return;
+  const anyObs = P.opts.some(j => j.legs.some(l => l.kind==='observed'));
+  let h = `<h3>${P.opts.length ? `${P.opts.length} option${P.opts.length>1?'s':''}` : 'No options'} · ${esc(niceDate(S.date))}</h3>`;
+  if(!P.opts.length){
+    h += `<div class="note">No scheduled journey found from ${nm(S.origin)} to ${nm(S.dest)} within 48 hours of the chosen time.${S.opts.observed ? '' : ' Try enabling observed GPS crossings to see unverified movement.'}</div>`;
+  }
+  if(anyObs) h += `<div class="note">This includes GPS-detected crossings. They show as observed connections until passenger-service availability is verified.</div>`;
+  P.opts.forEach((j,i) => {
+    const tr = j.legs.length-1, waitBefore = j.dep - P.t0;
+    const r = j.ret;
+    h += `<div class="opt${i===S.selOpt?' sel':''}" data-opt="${i}">
+      <div class="opt-head"><span class="t">${fmtClock(j.dep)} → ${fmtClock(j.arr)}</span><span class="d">${fmtDur(j.arr-j.dep)} · ${tr===0?'direct':tr+' transfer'+(tr>1?'s':'')}</span><span class="spacer"></span>
+      ${r.possible ? '<span class="badge ok">Same-day return possible</span>' : '<span class="badge">No same-day return</span>'}</div>
+      ${waitBefore>0 ? `<div class="small muted">Waits ${fmtDur(waitBefore)} after the requested time</div>` : ''}
+      ${legsHTML(j.legs)}
+      <div class="ret">${r.possible
+        ? `<b>Return:</b> leave ${nm(S.dest)} ${fmtClock(r.dep)}, back at ${nm(S.origin)} ${fmtClock(r.arr)} (allowing ${fmtDur(S.minStay)} at destination)<details><summary>Return legs</summary>${legsHTML(r.legs)}</details>`
+        : `<b>Same-day return:</b> not possible. ${esc(r.reason)}.`}</div>
+    </div>`;
+  });
+  el.innerHTML = h;
+  el.querySelectorAll('.opt').forEach(c => c.addEventListener('click', e => {
+    if(e.target.closest('details')) return;
+    S.selOpt = +c.dataset.opt; el.querySelectorAll('.opt').forEach(x => x.classList.toggle('sel', x===c)); drawOverlay();
+  }));
+  redrawMap();
+}
+function renderSources(){
+  const f = NET.feed, r = NET.calRange;
+  const routes = Object.values(NET.routes);
+  const by = {}; routes.forEach(x => (by[x.cls] ??= []).push(x));
+  const srcs = [...new Set(routes.filter(x=>x.cls!=='speedboat_unverified').map(x => `${x.source}${x.sourceDate?` (${x.sourceDate})`:''}`))];
+  $('#pSources').innerHTML = `
+    <div>Feed: <b>${esc(f.feed_publisher_name||'Unnamed GTFS feed')}</b>${f.feed_version?` · version ${esc(f.feed_version)}`:''}</div>
+    ${r ? `<div>Schedule dates: ${String(r[0]).replace(/(\d{4})(\d\d)(\d\d)/,'$1-$2-$3')} to ${String(r[1]).replace(/(\d{4})(\d\d)(\d\d)/,'$1-$2-$3')}</div>` : ''}
+    <div>${(by.ferry||[]).length} ferry routes · ${(by.speedboat_verified||[]).length} verified speedboat routes · ${(by.speedboat_unverified||[]).length} unverified speedboat routes (excluded)</div>
+    <ul style="padding-left:18px;margin:6px 0">${srcs.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
+    <div>Times are scheduled times; actual times vary with weather and operations. Minimum transfer ${TRANSFER} min.</div>`;
+}
+
+/* ============================================================
+   2. Connectivity dashboard
+   ============================================================ */
+function renderConnectivity(){
+  const {mon, agg} = computeWeek(), hubName = esc(NET.islands[NET.hub]?.name);
+  const rows = Object.values(NET.islands).filter(i => i.id!==NET.hub).map(i => {
+    const a = agg[i.id]; return {i, a, idx:indexOf(a), flag:insufficient(i,a)};
+  });
+  const poor = rows.filter(r => !r.flag && r.idx < S.conn.threshold), ins = rows.filter(r => r.flag);
+  const sum = (arr,k) => arr.reduce((s,r) => s + r.i[k], 0);
+  $('#cCards').innerHTML = `
+    <div class="card bad"><div class="k">Poor connectivity</div><div class="v">${poor.length} islands</div>
+      <div class="s">${fmtN(sum(poor,'pop'))} residents · ${fmtN(sum(poor,'p65'))} aged 65+ · ${fmtN(sum(poor,'pdis'))} with disabilities</div></div>
+    <div class="card grey"><div class="k">Insufficient timetable evidence</div><div class="v">${ins.length} islands</div>
+      <div class="s">${fmtN(sum(ins,'pop'))} residents · ${fmtN(sum(ins,'p65'))} aged 65+ · ${fmtN(sum(ins,'pdis'))} with disabilities</div></div>`;
+  // detail
+  const sel = S.conn.selected && NET.islands[S.conn.selected];
+  if(sel && sel.id !== NET.hub){
+    const a = agg[sel.id], c = components(a), idx = indexOf(a), flag = insufficient(sel,a);
+    const evid = {good:'<span class="badge ok">Timetable evidence: good</span>', limited:'<span class="badge warn">Timetable evidence: limited</span>', none:'<span class="badge bad">Timetable evidence: none</span>'}[sel.evidence] || '<span class="badge">Evidence: unknown</span>';
+    $('#cDetail').innerHTML = `<div class="detail">
+      <h2>${esc(sel.name)} <span class="muted small" style="font-weight:400">${esc(sel.atoll)}</span> ${evid}</h2>
+      ${flag ? `<div class="note">Insufficient timetable evidence. The values below come from what is published and may understate real service. ${(NET.obsByIsland[sel.id]||0)>0 ? `GPS data shows ${fmtN(NET.obsByIsland[sel.id])} crossings touching this island.` : ''}</div>` : ''}
+      <div class="small muted">Days with eligible services, week of ${esc(niceDate(mon))} (dot = same-day return to ${hubName} possible)</div>
+      <div class="days">${DOW.map((d,k) => `<span class="${a.days[k]?'on':''} ${a.sd[k]?'sd':''}" title="${d}">${d[0]}</span>`).join('')}</div>
+      <div class="kpis">
+        <div class="card"><div class="k">Connectivity Index</div><div class="v" style="color:${flag?'#6b7280':idxColor(idx)}">${flag?'?':Math.round(idx)}</div><div class="s">${flag?`Computed ${Math.round(idx)}; low evidence`:`${idx<S.conn.threshold?'Below':'Above'} poor threshold (${S.conn.threshold})`}</div></div>
+        <div class="card"><div class="k">Fastest to ${hubName}</div><div class="v">${fmtDur(a.best)}</div><div class="s">${a.best==null?'No connection within 48 h':`${a.bestTr} transfer${a.bestTr===1?'':'s'} · ${DOW[a.bestDay]}`}</div></div>
+        <div class="card"><div class="k">Healthcare access</div><div class="v">${a.health===0?'On island':fmtDur(a.health)}</div><div class="s">${a.healthDest && a.health>0 ? `to ${nm(a.healthDest)} (${esc(HEALTH_LABEL[NET.islands[a.healthDest].health]||NET.islands[a.healthDest].health)})` : a.health===0 ? esc(HEALTH_LABEL[sel.health]||sel.health) : 'No selected destination reachable'}</div></div>
+        <div class="card"><div class="k">Same-day return</div><div class="v">${a.sameDayDays}/7 days</div><div class="s">${fmtDur(S.minStay)} in ${hubName}</div></div>
+      </div>
+      <h3>Index components</h3>
+      ${COMP.map(([k,l]) => `<div class="comp"><span>${l.replace('hub',hubName)} <span class="muted">×${S.conn.weights[k]}</span></span><div class="bar"><i style="width:${Math.round(c[k]*100)}%"></i></div><span class="num">${c[k].toFixed(2)}</span></div>`).join('')}
+      <h3>Census</h3>
+      ${sel.hasCensus ? `<div class="small">${fmtN(sel.pop)} residents · ${fmtN(sel.p65)} aged 65+ · ${fmtN(sel.pdis)} with disabilities${idx<S.conn.threshold||flag?' · <b>potentially exposed to access gaps</b>':''}</div>` : '<div class="small muted">No census data loaded.</div>'}
+    </div>`;
+  } else {
+    $('#cDetail').innerHTML = `<div class="note info">Click an island on the map or in the table to see its breakdown.</div>`;
+  }
+  // table
+  const sortKey = S.conn.sort;
+  rows.sort((x,y) => sortKey==='pop' ? y.i.pop-x.i.pop : sortKey==='name' ? x.i.name.localeCompare(y.i.name) : (y.flag-x.flag) || x.idx-y.idx);
+  $('#cTable').innerHTML = `<thead><tr><th data-sort="name">Island</th><th class="num" data-sort="index">Index</th><th class="num">Days</th><th class="num">To ${hubName}</th><th class="num">Same-day</th><th class="num" data-sort="pop">Residents</th></tr></thead><tbody>${
+    rows.map(r => `<tr class="click${r.i.id===S.conn.selected?' sel':''}" data-id="${esc(r.i.id)}"><td>${esc(r.i.name)}</td>
+      <td class="num">${r.flag?'<span class="badge" title="Insufficient timetable evidence">?</span>':`<b style="color:${idxColor(r.idx)}">${Math.round(r.idx)}</b>`}</td>
+      <td class="num">${r.a.daysService}/7</td><td class="num">${fmtDur(r.a.best)}${r.a.best!=null?` <span class="muted">(${r.a.bestTr})</span>`:''}</td>
+      <td class="num">${r.a.sameDayDays}/7</td><td class="num">${fmtN(r.i.pop)}</td></tr>`).join('')}</tbody>`;
+  $$('#cTable tr.click').forEach(tr => tr.addEventListener('click', () => { S.conn.selected = tr.dataset.id; renderConnectivity(); const i = NET.islands[tr.dataset.id]; map.panTo([i.lat,i.lon]); }));
+  $$('#cTable th[data-sort]').forEach(th => { th.style.cursor='pointer'; th.addEventListener('click', () => { S.conn.sort = th.dataset.sort; renderConnectivity(); }); });
+  redrawMap();
+}
+function buildConnControls(){
+  $('#cWeights').innerHTML = COMP.map(([k,l]) => `<div class="slider"><span>${l.replace('hub', esc(NET.islands[NET.hub]?.name))}</span><input type="range" min="0" max="3" step="1" value="${S.conn.weights[k]}" data-w="${k}"><span class="num" id="w_${k}">${S.conn.weights[k]}</span></div>`).join('');
+  $$('#cWeights input').forEach(inp => inp.addEventListener('input', () => { S.conn.weights[inp.dataset.w] = +inp.value; $('#w_'+inp.dataset.w).textContent = inp.value; renderConnectivity(); }));
+  const types = [...new Set(Object.values(NET.islands).map(i => i.health).filter(Boolean))];
+  $('#cHealth').innerHTML = types.length ? types.map(t => `<label><input type="checkbox" value="${esc(t)}" ${S.conn.health.has(t)?'checked':''}>${esc(HEALTH_LABEL[t]||t)}</label>`).join('') : '<span class="muted small">No health_facility data in islands.csv.</span>';
+  $$('#cHealth input').forEach(c => c.addEventListener('change', () => { c.checked ? S.conn.health.add(c.value) : S.conn.health.delete(c.value); renderConnectivity(); }));
+}
+
+/* ============================================================
+   3. Disruption simulator
+   ============================================================ */
+function tripLabel(t, sh=0){ return `${fmtClock(t.stops[0].dep+sh).replace(/<[^>]+>/g,'')} ${NET.islands[t.stops[0].s]?.name} → ${NET.islands[t.stops.at(-1).s]?.name}`; }
+function tripsOn(ds){ return NET.tripList.filter(t => eligible(t,{ferry:true,speedboat:true}) && active(t.service, ds)); }
+function fillDisruptionSelects(){
+  const ts = tripsOn(S.scen.date), rids = [...new Set(ts.map(t => t.route.id))];
+  const cur = $('#dRoute').value;
+  $('#dRoute').innerHTML = rids.length ? rids.map(id => { const r = NET.routes[id]; return `<option value="${esc(id)}">${esc(r.short)} · ${esc(r.long)} (${KIND_LABEL[r.cls]})</option>`; }).join('') : '<option value="">No services on this date</option>';
+  if(rids.includes(cur)) $('#dRoute').value = cur;
+  fillTrips();
+}
+function fillTrips(){
+  const rid = $('#dRoute').value;
+  const ts = tripsOn(S.scen.date).filter(t => t.route.id===rid).sort((a,b) => a.stops[0].dep-b.stops[0].dep);
+  $('#dTrip').innerHTML = ts.map(t => `<option value="${esc(t.id)}">${esc(tripLabel(t))}</option>`).join('');
+}
+function renderScenarioList(){
+  const items = [];
+  for(const id of S.scen.cancel){ const t = NET.trips[id]; items.push(`<div class="chip cancel"><b>Cancel</b> ${esc(t.route.short)} ${esc(tripLabel(t))}<button class="small x" data-rm="c:${esc(id)}">✕</button></div>`); }
+  for(const [id,v] of Object.entries(S.scen.delay)){ const t = NET.trips[id]; items.push(`<div class="chip delay"><b>Delay ${v} min</b> ${esc(t.route.short)} ${esc(tripLabel(t))}<button class="small x" data-rm="d:${esc(id)}">✕</button></div>`); }
+  $('#dList').innerHTML = items.length ? `<h3>Scenario</h3><div class="chips">${items.join('')}</div><button class="small" id="dReset">Reset scenario</button>` : '<p class="muted small">No disruptions added. Pick a service and trip above.</p>';
+  $$('#dList [data-rm]').forEach(b => b.addEventListener('click', () => {
+    const [k,id] = b.dataset.rm.split(/:(.+)/); if(k==='c') S.scen.cancel.delete(id); else delete S.scen.delay[id];
+    S.proposals = null; updateScenario();
+  }));
+  $('#dReset')?.addEventListener('click', () => { S.scen.cancel.clear(); S.scen.delay = {}; S.scen.prop = {}; S.scen.propLog = []; S.proposals = null; updateScenario(); });
+}
+function updateScenario(){
+  const has = S.scen.cancel.size || Object.keys(S.scen.delay).length || Object.keys(S.scen.prop).length;
+  S.scenRes = has ? runScenario(true) : null;
+  S.scenResNoProp = has && Object.keys(S.scen.prop).length ? runScenario(false) : S.scenRes;
+  renderScenarioList(); renderDisruption(); renderTimetable(); redrawMap();
+}
+function impactText(d){
+  const p = [];
+  if(d.svcLost) p.push('loses all service that day');
+  if(d.sdLost) p.push('loses same-day return');
+  if(d.overnight) p.push('needs an overnight stay');
+  const f = (v,lbl) => v===Infinity ? `${lbl}: no connection within 48 h` : v>0 ? `${lbl}: +${fmtDur(v)}` : null;
+  [f(d.out,'to hub'), f(d.in,'from hub')].forEach(x => x && p.push(x));
+  return p.join(' · ');
+}
+function renderDisruption(){
+  const el = $('#dResults'), R = S.scenRes;
+  if(!R){ el.innerHTML = ''; return; }
+  const hubName = esc(NET.islands[NET.hub].name);
+  const aff = R.affected.map(id => ({i:NET.islands[id], d:R.islands[id].d})).sort((a,b) => b.i.pop-a.i.pop);
+  el.innerHTML = `
+    <h3>Impact on ${esc(niceDate(R.ds))}</h3>
+    <div class="cards">
+      <div class="card bad"><div class="k">Connections broken</div><div class="v">${R.lost.length}</div><div class="s">${R.gained} new connections formed</div></div>
+      <div class="card bad"><div class="k">Lose same-day access</div><div class="v">${R.sdLost.length} islands</div><div class="s">${R.sdLost.map(nm).join(', ') || 'none'}</div></div>
+      <div class="card"><div class="k">Residents affected</div><div class="v">${fmtN(R.pop)}</div><div class="s">${fmtN(R.p65)} aged 65+ · ${fmtN(R.pdis)} with disabilities</div></div>
+      <div class="card"><div class="k">Islands affected</div><div class="v">${R.affected.length}</div><div class="s">${R.svcLost.length} lose all service that day</div></div>
+    </div>
+    <h3>Islands affected</h3>
+    ${aff.length ? `<table><thead><tr><th>Island</th><th>Change (hub = ${hubName})</th><th class="num">Residents</th></tr></thead><tbody>${aff.map(x => `<tr><td>${esc(x.i.name)}</td><td class="small">${esc(impactText(x.d))}</td><td class="num">${fmtN(x.i.pop)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted small">No island loses access to or from the hub.</p>'}
+    <h3>Broken connections and remaining alternatives</h3>
+    ${R.lost.length ? `<table><thead><tr><th>Connection</th><th>Alternative</th></tr></thead><tbody>${R.lost.slice(0,40).map(L => `<tr><td class="small">${esc(L.A.route.short)} arr ${nm(L.s)} ${fmtClock(L.a)} → ${esc(L.B.route.short)} towards ${nm(L.next)} ${fmtClock(L.d)}</td>
+      <td class="small">${L.alt ? `<span class="badge bad">${esc(L.alt)}</span>` : `reach ${nm(L.next)} ${fmtClock(L.altArr)}${L.baseArr!=null && L.altArr>L.baseArr ? ` <span class="muted">(+${fmtDur(L.altArr-L.baseArr)})</span>` : ''}`}</td></tr>`).join('')}</tbody></table>${R.lost.length>40?`<p class="muted small">…and ${R.lost.length-40} more</p>`:''}` : '<p class="muted small">No timed transfers are broken.</p>'}
+    <p class="small muted">Affected = loses service, same-day return, or gets a later earliest arrival to or from ${hubName} on the scenario date.</p>`;
+}
+
+/* ============================================================
+   4. Timetable improvement
+   ============================================================ */
+function renderTimetable(){
+  const has = S.scen.cancel.size || Object.keys(S.scen.delay).length;
+  $('#tContext').innerHTML = has
+    ? `Goal: <b>restore connections</b> broken by the disruption scenario on ${esc(niceDate(S.scen.date))} (${S.scenResNoProp?.lost.length||0} broken).`
+    : `No disruption set, so the goal is <b>general access improvement</b> on ${esc(niceDate(S.scen.date))}. Add disruptions in the Disruption tab to target restoring connections.`;
+  // proposals table
+  const P = S.proposals;
+  if(P){
+    if(!P.rows.length){
+      $('#tTable').innerHTML = `<div class="note">No feasible adjustment found within ±${P.range} min. No single trip shift restores connections or improves access without losing others. Consider an extra trip, a different vessel assignment, or a wider search window.</div>`;
+    } else {
+      $('#tTable').innerHTML = `<h3>Top proposals (${P.evaluated} shifts tested)</h3><table><thead><tr><th>Proposal</th><th class="num">Restored</th><th class="num">New lost</th><th>Access improvement</th><th>Checks still needed</th><th></th></tr></thead><tbody>${
+        P.rows.map((r,k) => `<tr><td class="small"><b>${esc(r.t.route.short)}</b> ${esc(tripLabel(r.t, r.cur))} <b style="color:var(--shift)">${r.s>0?'+':''}${r.s} min</b></td>
+          <td class="num">${r.restored}</td><td class="num">${r.newLost}</td>
+          <td class="small">${r.sdGain>0?`+${r.sdGain} island${r.sdGain>1?'s':''} same-day<br>`:''}${r.people>0?`${fmtN(r.people)} residents get journeys ${Math.round(r.saved/r.people)} min shorter on average`:r.sdGain>0?'':'—'}${r.sdLoss>0?`<br><span style="color:var(--bad)">−${r.sdLoss} same-day</span>`:''}${r.later>0?`<br><span style="color:var(--warn)">Later earliest arrival for ${fmtN(r.later)} residents</span>`:''}</td>
+          <td class="small">${r.checks.map(c => `<div>${esc(c)}</div>`).join('')}</td>
+          <td><button class="small" data-apply="${k}">Apply</button></td></tr>`).join('')}</tbody></table>`;
+      $$('[data-apply]').forEach(b => b.addEventListener('click', () => {
+        const r = P.rows[+b.dataset.apply];
+        S.scen.prop[r.t.id] = (S.scen.prop[r.t.id]||0) + r.s;
+        S.scen.propLog.push({id:r.t.id, s:r.s});
+        S.proposals = null; updateScenario();
+        $('#tStatus').innerHTML = `<div class="note info">Applied to the scenario: ${esc(r.t.route.short)} ${r.s>0?'+':''}${r.s} min. Run the search again to look for further adjustments.</div>`;
+      }));
+    }
+  } else $('#tTable').innerHTML = '';
+  // applied
+  const props = Object.entries(S.scen.prop).filter(e => e[1]);
+  $('#tApplied').innerHTML = props.length ? `<h3>Applied proposals (scenario only)</h3><div class="chips">${props.map(([id,v]) => { const t = NET.trips[id]; return `<div class="chip prop"><b>${v>0?'+':''}${v} min</b> ${esc(t.route.short)} ${esc(tripLabel(t))}<button class="small x" data-rmp="${esc(id)}">✕</button></div>`; }).join('')}</div>` : '';
+  $$('[data-rmp]').forEach(b => b.addEventListener('click', () => { delete S.scen.prop[b.dataset.rmp]; S.proposals = null; updateScenario(); }));
+  // comparison
+  if(props.length && S.scenRes && S.scenResNoProp){
+    const A = S.scenResNoProp, B = S.scenRes, has2 = has;
+    $('#tCompare').innerHTML = `<h3>Comparison against the published timetable</h3><table><thead><tr><th></th><th class="num">${has2?'Disruption only':'Published'}</th><th class="num">With proposals</th></tr></thead><tbody>
+      <tr><td>Connections broken</td><td class="num">${has2?A.lost.length:0}</td><td class="num">${B.lost.length}</td></tr>
+      <tr><td>New connections</td><td class="num">${has2?A.gained:0}</td><td class="num">${B.gained}</td></tr>
+      <tr><td>Islands losing same-day access</td><td class="num">${has2?A.sdLost.length:0}</td><td class="num">${B.sdLost.length}</td></tr>
+      <tr><td>Residents with later or lost access</td><td class="num">${fmtN(has2?A.pop:0)}</td><td class="num">${fmtN(B.pop)}</td></tr></tbody></table>`;
+  } else $('#tCompare').innerHTML = '';
+}
+function vesselChecks(t, cur, s){
+  const checks = [], ds = S.scen.date, sh = cur + s;
+  const dep = t.stops[0].dep + sh, arr = t.stops.at(-1).arr + sh, end = t.stops.at(-1).s, start = t.stops[0].s;
+  const same = tripsOn(ds).filter(u => u.route.id===t.route.id && u.id!==t.id && !S.scen.cancel.has(u.id));
+  const shOf = u => (S.scen.delay[u.id]||0) + (S.scen.prop[u.id]||0);
+  const next = same.filter(u => u.stops[0].s===end && u.stops[0].dep+shOf(u) >= t.stops.at(-1).arr+cur).sort((a,b) => a.stops[0].dep-b.stops[0].dep)[0];
+  if(next){ const g = next.stops[0].dep + shOf(next) - arr; if(g < MIN_TURN) checks.push(`Turnaround only ${g} min before ${next.route.short} ${fmtClock(next.stops[0].dep+shOf(next)).replace(/<[^>]+>/g,'')}`); }
+  const prev = same.filter(u => u.stops.at(-1).s===start && u.stops.at(-1).arr+shOf(u) <= t.stops[0].dep+cur).sort((a,b) => b.stops.at(-1).arr-a.stops.at(-1).arr)[0];
+  if(prev){ const g = dep - prev.stops.at(-1).arr - shOf(prev); if(g < MIN_TURN) checks.push(`Only ${g} min after inbound ${prev.route.short}`); }
+  if(dep < 300 || arr > 1410) checks.push('Outside usual operating hours');
+  checks.push('Fleet, operator and terminal constraints');
+  return checks;
+}
+function findProposals(){
+  const range = +$('#tRange').value, ds = S.scen.date, o = {ferry:true, speedboat:true};
+  const shifts = [-60,-45,-30,-20,-15,-10,-5,5,10,15,20,30,45,60].filter(s => Math.abs(s) <= range);
+  const freq = routeFreq(ds);
+  const sc = scenarioObj(true);
+  const base = transferPairs(ds, null), cur = transferPairs(ds, sc);
+  const lostNow = [...base.keys()].filter(k => !cur.has(k));
+  const curBaseKeys = [...cur.keys()].filter(k => base.has(k));
+  // the disrupted trips themselves are not candidates (shifting them would just undo the scenario)
+  const cands = tripsOn(ds).filter(t => !sc.cancel.has(t.id) && !S.scen.delay[t.id] && (freq[t.route.id]||0) <= HF_TRIPS);
+  const pre = [];
+  for(const t of cands) for(const s of shifts){
+    const sc2 = {cancel:sc.cancel, shift:{...sc.shift, [t.id]:(sc.shift[t.id]||0)+s}};
+    const p2 = transferPairs(ds, sc2);
+    const restored = lostNow.filter(k => p2.has(k)).length;
+    const newLost = curBaseKeys.filter(k => !p2.has(k)).length;
+    pre.push({t, s, sc2, restored, newLost});
+  }
+  const restoreMode = lostNow.length > 0;
+  let pool = restoreMode ? pre.filter(p => p.restored > 0) : pre.filter(p => p.newLost === 0);
+  pool.sort((a,b) => (b.restored-b.newLost) - (a.restored-a.newLost));
+  pool = pool.slice(0, restoreMode ? 60 : 400);
+  // access evaluation
+  const ctxC = makeCtx(buildConns(ds,o,sc));
+  const ids = Object.keys(NET.islands).filter(id => id!==NET.hub);
+  const curM = Object.fromEntries(ids.map(id => [id, islandDay(ctxC,id,true)])), curIn = hubBestIn(ctxC);
+  const clip = v => v==null ? 2*DAY : Math.min(v, 2*DAY);
+  const rows = [];
+  for(const p of pool){
+    const ctx2 = makeCtx(buildConns(ds,o,p.sc2,false)), in2 = hubBestIn(ctx2);
+    let saved=0, people=0, sdGain=0, sdLoss=0, later=0;
+    for(const id of ids){
+      const m1 = curM[id], m2 = islandDay(ctx2,id,true), pop = NET.islands[id].pop||0;
+      if(clip(m2.outArr) > clip(m1.outArr) || clip(m2.inArr) > clip(m1.inArr)) later += pop;
+      // shortest journey time each way: only changes when a shift creates or breaks a connection
+      const dm = (clip(m1.best)-clip(m2.best)) + (clip(curIn[id])-clip(in2[id]));
+      if(dm > 0){ saved += dm*pop; people += pop; } else if(dm < 0){ saved += dm*pop; }
+      if(m2.sameDay && !m1.sameDay) sdGain++; if(m1.sameDay && !m2.sameDay) sdLoss++;
+    }
+    const score = p.restored*1000 - p.newLost*1200 + (sdGain-sdLoss)*400 + saved/2000;
+    if(score <= 0 || (p.restored===0 && sdGain===0 && saved<=0) || sdLoss > sdGain) continue;
+    rows.push({...p, saved:Math.max(0,saved), people, sdGain, sdLoss, later, score, cur:sc.shift[p.t.id]||0});
+  }
+  rows.sort((a,b) => b.score-a.score);
+  const uniq = [], seenT = new Set();
+  for(const r of rows){ if(seenT.has(r.t.id)) continue; seenT.add(r.t.id); uniq.push(r); if(uniq.length>=8) break; }
+  uniq.forEach(r => r.checks = vesselChecks(r.t, r.cur, r.s));
+  S.proposals = {rows:uniq, range, evaluated:pre.length};
+}
+
+/* ============================================================
+   5. Observed network
+   ============================================================ */
+function observedPairs(){
+  const m = {};
+  for(const c of NET.crossings){
+    if(!NET.islands[c.from] || !NET.islands[c.to]) continue;
+    const [a,b] = [c.from,c.to].sort(), k = a+'|'+b;
+    const p = m[k] ??= {a, b, n:0, days:0, vessels:0, conf:'low', inSched:NET.schedPairs.has(k)};
+    p.n += c.n; p.days = Math.max(p.days, c.days); p.vessels = Math.max(p.vessels, c.vessels);
+    const rank = {low:0, medium:1, high:2}; if(rank[c.conf] > rank[p.conf]) p.conf = c.conf;
+  }
+  return Object.values(m).filter(p => p.n >= S.obs.minCount && (!S.obs.onlyMissing || !p.inSched));
+}
+function renderObserved(){
+  const pairs = observedPairs(), keys = new Set(pairs.map(p => p.a+'|'+p.b));
+  const rows = NET.crossings.filter(c => keys.has([c.from,c.to].sort().join('|'))).sort((a,b) => b.n-a.n);
+  const missing = pairs.filter(p => !p.inSched);
+  const period = [...new Set(NET.crossings.map(c => c.period).filter(Boolean))].join(', ');
+  $('#oCards').innerHTML = `
+    <div class="card"><div class="k">Harbour pairs</div><div class="v">${pairs.length}</div><div class="s">${fmtN(pairs.reduce((s,p)=>s+p.n,0))} crossings${period?` · ${esc(period)}`:''}</div></div>
+    <div class="card bad"><div class="k">Missing from schedules</div><div class="v">${missing.length}</div><div class="s">${fmtN(missing.reduce((s,p)=>s+p.n,0))} crossings with no published service</div></div>`;
+  $('#oTable').innerHTML = rows.length ? `<thead><tr><th>Crossing</th><th class="num">Count</th><th class="num">Days</th><th>Duration (min)</th><th>Recurring departures</th><th>Confidence</th></tr></thead><tbody>${
+    rows.map(c => { const inS = NET.schedPairs.has([c.from,c.to].sort().join('|'));
+      return `<tr><td>${nm(c.from)} → ${nm(c.to)}${inS?'':' <span class="badge warn">not scheduled</span>'}</td><td class="num">${fmtN(c.n)}</td><td class="num">${c.days}</td>
+      <td class="small">${isFinite(c.p10)?`${c.p10}–${c.p90} <span class="muted">(med ${c.med})</span>`:'—'}</td>
+      <td class="small">${c.days >= S.obs.minDays ? (c.deps.length ? c.deps.map(m => fmtClock(m)).join(', ') : c.n/Math.max(1,c.days) >= 10 ? `frequent, about ${Math.round(c.n/c.days)}/day` : '<span class="muted">no clear pattern</span>') : `<span class="muted">insufficient days (${c.days})</span>`}</td>
+      <td><span class="badge ${c.conf==='high'?'ok':c.conf==='medium'?'info':''}">${esc(c.conf)}</span></td></tr>`; }).join('')}</tbody>`
+    : '<tbody><tr><td class="muted">No crossings match the filters.</td></tr></tbody>';
+  const gaps = Object.values(NET.islands).filter(i => i.gps==null || i.gps < 0.6).sort((a,b) => (a.gps??-1)-(b.gps??-1));
+  $('#oGaps').innerHTML = gaps.length ? `<p class="muted">Low GPS coverage. A missing crossing here is not evidence that no service runs.</p><table><tbody>${gaps.map(i => `<tr><td>${esc(i.name)}</td><td class="num">${i.gps==null?'unknown':Math.round(i.gps*100)+'%'}</td><td class="small muted">${i.evidence!=='good'&&i.evidence!=='unknown'?`timetable evidence ${esc(i.evidence)}`:''}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">No coverage gaps flagged.</p>';
+  redrawMap();
+}
+
+/* ============================================================
+   Tabs & wiring
+   ============================================================ */
+function setTab(t){
+  S.tab = t;
+  $$('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab===t));
+  $$('section[data-tab]').forEach(s => s.classList.toggle('active', s.dataset.tab===t));
+  map.closePopup();
+  if(t==='planner') renderPlanner(), redrawMap();
+  if(t==='connectivity') renderConnectivity();
+  if(t==='disruption' || t==='timetable'){ renderDisruption(); renderTimetable(); redrawMap(); }
+  if(t==='observed') renderObserved();
+  if(t!=='planner') fitAll();
+}
+$$('#tabs button').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+
+function wire(){
+  $('#pOrigin').addEventListener('change', e => { S.origin = e.target.value || null; runPlanner(); });
+  $('#pDest').addEventListener('change', e => { S.dest = e.target.value || null; runPlanner(); });
+  $('#pSwap').addEventListener('click', () => { [S.origin, S.dest] = [S.dest, S.origin]; $('#pOrigin').value = S.origin||''; $('#pDest').value = S.dest||''; runPlanner(); });
+  $('#pDate').addEventListener('change', e => { if(e.target.value){ S.date = e.target.value; runPlanner(); } });
+  $('#pTime').addEventListener('change', e => { S.time = e.target.value || '00:00'; runPlanner(); });
+  $('#pStay').addEventListener('change', e => { S.minStay = +e.target.value; weekCache.key = null; runPlanner(); });
+  $('#mFerry').addEventListener('change', e => { S.opts.ferry = e.target.checked; runPlanner(); });
+  $('#mSpeed').addEventListener('change', e => { S.opts.speedboat = e.target.checked; runPlanner(); });
+  $('#mObs').addEventListener('change', e => { S.opts.observed = e.target.checked; runPlanner(); });
+
+  $('#cDate').addEventListener('change', e => { if(e.target.value){ S.conn.date = e.target.value; renderConnectivity(); } });
+  $('#cThresh').addEventListener('change', e => { S.conn.threshold = +e.target.value; renderConnectivity(); });
+  $('#cObs').addEventListener('change', e => { S.conn.includeObs = e.target.checked; renderConnectivity(); });
+
+  $('#dDate').addEventListener('change', e => {
+    if(!e.target.value) return;
+    S.scen.date = e.target.value; S.scen.cancel.clear(); S.scen.delay = {}; S.scen.prop = {}; S.proposals = null;
+    fillDisruptionSelects(); updateScenario();
+  });
+  $('#dRoute').addEventListener('change', fillTrips);
+  $('#dAdd').addEventListener('click', () => {
+    const id = $('#dTrip').value; if(!id) return;
+    const act = document.querySelector('input[name=dAct]:checked').value;
+    if(act==='cancel'){ S.scen.cancel.add(id); delete S.scen.delay[id]; }
+    else { S.scen.delay[id] = +$('#dDelay').value; S.scen.cancel.delete(id); }
+    S.proposals = null; updateScenario();
+  });
+
+  $('#tRun').addEventListener('click', () => {
+    $('#tStatus').innerHTML = '<p class="spin">Testing trip shifts…</p>'; $('#tTable').innerHTML = '';
+    setTimeout(() => { const t0 = performance.now(); findProposals(); $('#tStatus').innerHTML = `<p class="small muted">Search finished in ${Math.round(performance.now()-t0)} ms.</p>`; renderTimetable(); }, 30);
+  });
+
+  $('#oMin').addEventListener('change', e => { S.obs.minCount = +e.target.value; renderObserved(); });
+  $('#oDays').addEventListener('change', e => { S.obs.minDays = +e.target.value; weekCache.key = null; renderObserved(); });
+  $('#oMissing').addEventListener('change', e => { S.obs.onlyMissing = e.target.checked; renderObserved(); });
+
+  $('#openData').addEventListener('click', () => { renderFileTable(); $('#dataModal').classList.remove('hidden'); });
+  $('#closeData').addEventListener('click', () => $('#dataModal').classList.add('hidden'));
+  $('#dataModal').addEventListener('click', e => { if(e.target.id==='dataModal') $('#dataModal').classList.add('hidden'); });
+  $('#useSample').addEventListener('click', () => { load(buildSample(), true); $('#loadMsg').innerHTML = '<span class="status-dot ok"></span>Sample data loaded.'; renderFileTable(); });
+  $('#fileInput').addEventListener('change', e => loadFiles([...e.target.files]));
+  window.addEventListener('resize', () => map.invalidateSize());
+}
+
+/* ============================================================
+   Data loading
+   ============================================================ */
+function parseCSV(text){
+  return Papa.parse(text.replace(/^﻿/,''), {header:true, skipEmptyLines:true, transformHeader:h => h.trim()}).data;
+}
+async function loadFiles(files){
+  const raw = {}, names = FILES.map(f => f.name);
+  for(const f of files){
+    const n = f.name.toLowerCase();
+    if(n.endsWith('.zip')){
+      const zip = await JSZip.loadAsync(f);
+      for(const path of Object.keys(zip.files)){
+        const base = path.split('/').pop().toLowerCase();
+        if(names.includes(base)) raw[base] = parseCSV(await zip.files[path].async('string'));
+      }
+    } else if(names.includes(n)) raw[n] = parseCSV(await f.text());
+  }
+  finishLoad(raw);
+}
+function finishLoad(raw){
+  const missing = ['stops.txt','routes.txt','trips.txt','stop_times.txt'].filter(n => !raw[n]);
+  if(!raw['calendar.txt'] && !raw['calendar_dates.txt']) missing.push('calendar.txt or calendar_dates.txt');
+  if(missing.length){ $('#loadMsg').innerHTML = `<span class="status-dot bad"></span>Missing required files: ${missing.map(esc).join(', ')}. Nothing was changed.`; return false; }
+  load(raw, false);
+  const w = NET.warnings.length ? ` ${NET.warnings.length} warning(s): ${NET.warnings.slice(0,5).map(esc).join('; ')}` : '';
+  $('#loadMsg').innerHTML = `<span class="status-dot ok"></span>Loaded ${Object.keys(raw).length} files: ${NET.tripList.length} trips, ${Object.keys(NET.islands).length} islands, ${NET.crossings.length} crossing rows.${w}`;
+  renderFileTable();
+  return true;
+}
+function renderFileTable(){
+  $('#fileTable').innerHTML = `<thead><tr><th>File</th><th>Contents and columns</th><th class="num">Rows</th><th></th></tr></thead><tbody>${
+    FILES.map(f => { const rows = RAW?.[f.name]; return `<tr><td><span class="status-dot ${rows?'ok':f.req?'bad':''}"></span><code>${f.name}</code>${f.req?'':' <span class="muted">optional</span>'}</td>
+      <td class="small">${esc(f.desc)}<br><span class="muted">${esc(f.cols)}</span></td><td class="num">${rows?fmtN(rows.length):'—'}</td>
+      <td>${IS_SAMPLE && rows ? `<button class="small" data-dl="${f.name}">Sample</button>` : ''}</td></tr>`; }).join('')}</tbody>`;
+  $$('[data-dl]').forEach(b => b.addEventListener('click', () => {
+    const blob = new Blob([Papa.unparse(RAW[b.dataset.dl])], {type:'text/csv'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = b.dataset.dl; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }));
+}
+function defaultDate(){
+  const now = new Date(), today = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  const r = NET.calRange; if(!r || (ymd(today) >= r[0] && ymd(today) <= r[1])) return today;
+  return String(r[0]).replace(/(\d{4})(\d\d)(\d\d)/,'$1-$2-$3');
+}
+function fitAll(){
+  const pts = Object.values(NET.islands).filter(i => isFinite(i.lat)).map(i => [i.lat,i.lon]);
+  if(pts.length) map.fitBounds(pts, {padding:[30,30]});
+}
+function load(raw, sample){
+  RAW = raw; IS_SAMPLE = sample; NET = normalize(raw);
+  connCache.clear(); weekCache.key = null; Object.keys(freqCache).forEach(k => delete freqCache[k]);
+  const hubName = NET.islands[NET.hub]?.name || 'hub';
+  $$('.hubName').forEach(e => e.textContent = hubName);
+  $('#feedBadge').className = 'badge ' + (sample ? 'sample' : 'info');
+  $('#feedBadge').textContent = sample ? 'Sample data · illustrative only' : (NET.feed.feed_publisher_name || 'GTFS feed loaded');
+  const d = defaultDate();
+  Object.assign(S, {date:d, plan:null, proposals:null, scenRes:null, scenResNoProp:null});
+  S.conn.date = d; S.conn.selected = null;
+  S.scen = {date:d, cancel:new Set(), delay:{}, prop:{}, propLog:[]};
+  S.origin = NET.islands.MAA ? 'MAA' : null; S.dest = NET.hub;
+  if(!sample){ S.origin = null; }
+  islandOptions($('#pOrigin')); islandOptions($('#pDest'));
+  $('#pOrigin').value = S.origin||''; $('#pDest').value = S.dest||'';
+  $('#pDate').value = d; $('#cDate').value = d; $('#dDate').value = d;
+  buildConnControls(); renderSources(); fillDisruptionSelects(); renderScenarioList();
+  fitAll(); updateLabelZoom();
+  setTab(S.tab);
+  if(S.tab==='planner') runPlanner();
+}
+async function tryAutoLoad(){
+  if(!location.protocol.startsWith('http')) return false;
+  try{
+    const head = await fetch('data/stops.txt', {cache:'no-store'});
+    if(!head.ok) return false;
+    const raw = {};
+    await Promise.all(FILES.map(async f => { const r = await fetch('data/'+f.name, {cache:'no-store'}); if(r.ok) raw[f.name] = parseCSV(await r.text()); }));
+    return finishLoad(raw);
+  }catch(e){ return false; }
+}
+
+wire();
+load(buildSample(), true);
+tryAutoLoad();
+</script>
+</body>
+</html>
