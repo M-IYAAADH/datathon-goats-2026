@@ -1,6 +1,9 @@
 // The UI's one seam to the router (Member A's lane). No routing logic lives here.
-import { findJourneys as routerFindJourneys } from '../router/planner';
-import type { Bundle, Journey, Query } from '../router/model';
+import {
+  findJourneys as routerFindJourneys,
+  findWaitAlternatives as routerFindWaitAlternatives,
+} from '../router/planner';
+import type { Bundle, Journey, Query, WaitAlternativesResult } from '../router/model';
 
 export type {
   Connection,
@@ -20,6 +23,15 @@ export type JourneyQuery = Query;
 
 export function findJourneys(bundle: Bundle, query: Query): Journey[] {
   return routerFindJourneys(bundle, query);
+}
+
+export function findWaitAlternatives(
+  bundle: Bundle,
+  query: Query,
+  journey: Journey,
+  transferIndex: number,
+): WaitAlternativesResult {
+  return routerFindWaitAlternatives(bundle, query, journey, transferIndex);
 }
 
 export function parseHHMM(text: string): number | null {

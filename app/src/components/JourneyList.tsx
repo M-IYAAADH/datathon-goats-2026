@@ -1,22 +1,20 @@
-import type { TimeRange } from '../data/load';
-import { formatHHMM, type Journey } from '../data/planner';
+import { useMemo } from 'react';
+import type { Bundle } from '../data/load';
+import type { Journey, Query } from '../data/planner';
+import { JourneyTimeline, formatMinutes, formatRange } from './JourneyTimeline';
 import './JourneyList.css';
 
-type Props = { journeys: Journey[]; searched: boolean };
+type Props = {
+  journeys: Journey[];
+  searched: boolean;
+  bundle: Bundle;
+  query: Query | null;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+};
 
 const ARROW = '→';
 const DASH = '–';
-
-function formatRange(r: TimeRange): string {
-  return r.min === r.max ? formatHHMM(r.min) : `${formatHHMM(r.min)}${DASH}${formatHHMM(r.max)}`;
-}
-
-function formatMinutes(total: number): string {
-  const h = Math.floor(total / 60);
-  const m = total % 60;
-  if (h === 0) return `${m} min`;
-  return m === 0 ? `${h} h` : `${h} h ${m} min`;
-}
 
 function formatDuration(j: Journey): string {
   const lo = Math.max(0, j.arr.min - j.dep.max);
@@ -51,7 +49,10 @@ function EmptyIcon() {
   );
 }
 
-export function JourneyList({ journeys, searched }: Props) {
+export function JourneyList({ journeys, searched, bundle, query, selectedId, onSelect }: Props) {
+  const names = useMemo(() => new Map(bundle.stops.map((s) => [s.id, s.name])), [bundle.stops]);
+  const name = (id: string) => names.get(id) ?? id;
+
   if (!searched) {
     return (
       <div className="journey-empty">
@@ -71,33 +72,56 @@ export function JourneyList({ journeys, searched }: Props) {
 
   return (
     <ol className="journey-list" aria-label="Journey options">
-      {journeys.map((j, i) => (
-        <li key={j.id} className="journey-card card">
-          <div className="journey-head">
-            <p className="journey-times">
-              {formatRange(j.dep)} {ARROW} {formatRange(j.arr)}
-            </p>
-            {i === 0 && <span className="pill">Earliest arrival</span>}
-          </div>
-          <p className="journey-meta">
-            {formatDuration(j)} · {formatTransfers(j.transfers.length)}
-          </p>
-          <ul className="journey-legs" aria-label="Legs">
-            {j.rides.map((leg) => (
-              <li key={leg.tripId + leg.from} className="journey-leg">
-                <span>
-                  {leg.from} {ARROW} {leg.to}
+      {journeys.map((j, i) => {
+        const selected = j.id === selectedId;
+        const longWait = j.transfers.some((t) => t.assessment.long);
+        const panelId = `journey-detail-${i}`;
+        return (
+          <li key={j.id} className={`journey-card card${selected ? ' journey-selected' : ''}`}>
+            <button
+              type="button"
+              className="journey-select"
+              aria-pressed={selected}
+              aria-expanded={selected}
+              aria-controls={panelId}
+              onClick={() => onSelect(j.id)}
+            >
+              <span className="journey-head">
+                <span className="journey-times">
+                  {formatRange(j.dep)} {ARROW} {formatRange(j.arr)}
                 </span>
-                {leg.source === 'mtcc' ? (
-                  <span className="pill pill-info">Official</span>
-                ) : (
-                  <span className="pill pill-inferred">Inferred service</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </li>
-      ))}
+                <span className="journey-badges">
+                  {i === 0 && <span className="pill">Earliest arrival</span>}
+                  {longWait && <span className="pill pill-longwait">Long wait</span>}
+                  {j.usesInferred && (
+                    <span className="pill pill-inferred">Uses inferred service</span>
+                  )}
+                </span>
+              </span>
+              <span className="journey-meta">
+                {formatDuration(j)} · {formatTransfers(j.transfers.length)}
+              </span>
+              <span className="journey-legs">
+                {j.rides.map((ride, ri) => (
+                  <span key={ride.tripId + ride.from + ri} className="journey-leg">
+                    <span>
+                      {name(ride.from)} {ARROW} {name(ride.to)}
+                    </span>
+                    {ride.source === 'mtcc' ? (
+                      <span className="pill pill-info">Official</span>
+                    ) : (
+                      <span className="pill pill-inferred">Inferred service</span>
+                    )}
+                  </span>
+                ))}
+              </span>
+            </button>
+            <div id={panelId} className="journey-detail" hidden={!selected}>
+              {selected && query && <JourneyTimeline journey={j} bundle={bundle} query={query} />}
+            </div>
+          </li>
+        );
+      })}
     </ol>
   );
 }

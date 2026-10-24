@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Banner } from './components/Banner';
 import { Header } from './components/Header';
 import { HowItWorks } from './components/HowItWorks';
@@ -23,10 +23,13 @@ const HONESTY_TEXT =
 
 const NO_STOPS: Stop[] = [];
 const NO_LEGS: Leg[] = [];
+const NO_JOURNEYS: Journey[] = [];
+const NO_IDS: string[] = [];
 
 export function App() {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
-  const [, setQuery] = useState<JourneyQuery | null>(null);
+  const [query, setQuery] = useState<JourneyQuery | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [results, setResults] = useState<Journey[] | null>(null);
   const [view, setView] = useState<View>('plan');
   const { theme, toggle } = useTheme();
@@ -49,8 +52,15 @@ export function App() {
   function handleSubmit(q: JourneyQuery) {
     if (!ready) return;
     setQuery(q);
-    setResults(findJourneys(ready, q));
+    const found = findJourneys(ready, q);
+    setResults(found);
+    setSelectedId(found[0]?.id ?? null);
   }
+
+  const highlightLegIds = useMemo(() => {
+    const sel = results?.find((j) => j.id === selectedId);
+    return sel ? sel.rides.flatMap((r) => r.occurrences.map((o) => o.leg.id)) : NO_IDS;
+  }, [results, selectedId]);
 
   return (
     <div className="app">
@@ -94,8 +104,20 @@ export function App() {
             )}
           </div>
           <div className="card region" id="results" aria-label="Results" aria-live="polite">
-            <JourneyList journeys={results ?? []} searched={results !== null} />
+            {ready ? (
+              <JourneyList
+                journeys={results ?? NO_JOURNEYS}
+                searched={results !== null}
+                bundle={ready}
+                query={query}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+              />
+            ) : (
+              <p className="placeholder">Results appear here after you plan a journey.</p>
+            )}
           </div>
+          {/* U6: DisruptionPanel goes here */}
           {ready && (
             <div className="card region">
               <HowItWorks config={ready.config} />
@@ -113,6 +135,7 @@ export function App() {
               stops={ready?.stops ?? NO_STOPS}
               legs={ready?.legs ?? NO_LEGS}
               config={ready?.config}
+              highlightLegIds={highlightLegIds}
             />
           </div>
         </section>
