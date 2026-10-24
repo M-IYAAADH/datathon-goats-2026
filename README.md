@@ -7,7 +7,7 @@ An inter-island journey planner for the Maldives. It plans multi-leg trips over 
 
 ## Requirements
 
-- Node.js 20 or later with npm. Tested on Node 20.20.0 / npm 10.8.2. On Node 20, `npm install` prints an `EBADENGINE` warning because one map dependency (`@mapbox/jsonlint-lines-primitives`) declares `node >= 22`; the install, tests and build still pass. Use Node 22.12+ to avoid the warning. `app/package.json` has no `engines` field.
+- Node.js 22.12+ recommended, with npm. Tests and build also pass on Node 20.20.0 (npm 10.8.2) with engine warnings: on Node 20, `npm install` prints two `EBADENGINE` warnings, for `@mapbox/jsonlint-lines-primitives` (wants `>= 22`) and `vitest@5.0.5` (wants `^22.12`). `app/package.json` has no `engines` field.
 
 ## Run it (from a fresh clone)
 
@@ -47,8 +47,13 @@ tools/             build_shapes.py (map shape helper)
 
 Field definitions: `docs/data_dictionary.md`. Times are integer minutes since 00:00 Maldives time (UTC+5); values of 1440 or more are after midnight.
 
-Which bundle is in the repo: if `meta.json` has `"fixture": true`, the files are hand-made sample data and the app shows a "SAMPLE DATA" banner. At the time of writing, `main` holds the sample bundle (`buildVersion` `2026-10-24T15:00-sample`, 8 stops, 9 legs). The real-data bundle is arriving on branch `data/real-bundle`.
-TODO(numbers): once the real bundle is merged, replace this paragraph with its `buildVersion` and stop/leg counts.
+Which bundle is in the repo: the real bundle (`meta.json` `"fixture": false`) comes in through the data PRs. It is built by `scripts/build_app_data.py` in the data repo (see below) with build version `2026-10-24T17:00+05:00`. If `meta.json` ever has `"fixture": true`, the files are hand-made sample data and the app shows a "SAMPLE DATA" banner.
+
+The bundle is limited to the central study region: atolls AA, ADh, K, V and Greater Malé. Alongside the five JSON files it adds two map layers:
+- `islands.geojson`: island footprints from OneMap (OneMap Data Usage License).
+- `atolls.geojson`: convex hulls of the COD-AB v02 / OneMap island polygons. Display only; not a legal or reef boundary.
+
+TODO(numbers): region bundle counts. For reference, the nationwide bundle before the region cut had 143 stops and 342 legs (311 MTCC, 31 inferred).
 
 ## How the data is regenerated
 
@@ -56,9 +61,13 @@ The bundle is produced by a script in the data repository, not in this repo:
 
 - Data repo: https://github.com/M-IYAAADH/datathon-2026 (vessel outputs on branch `data/organise-ready-not-ready`).
 - Script: `scripts/build_app_data.py`, documented in `docs/app_data_build.md`, on branch `app/build-app-data` of the data repo.
-- It reads only the shareable inputs in the data repo (extracted MTCC timetable tables, disclosure-filtered vessel aggregates such as `data/derived/vessels/corridor_services.json`, and the per-island Census extract) and writes the five JSON files into `app/public/data/`. It does not need private data.
+- It reads only the shareable inputs in the data repo (extracted MTCC timetable tables, disclosure-filtered vessel aggregates such as `data/derived/vessels/corridor_services.json`, and the per-island Census extract) and writes the bundle files into `app/public/data/`. It does not need private data.
 
-TODO(numbers): confirm the exact command and pinned data-repo commit from `docs/app_data_build.md` once that branch is pushed (planned form: `python scripts/build_app_data.py --out <path-to-this-repo>/app/public/data`).
+Command, run from a checkout of the data repo on branch `app/build-app-data`:
+
+```
+python3 scripts/build_app_data.py --out <path-to-this-repo>/app/public/data --build-version 2026-10-24T17:00+05:00
+```
 
 ## What is not reproducible from the public repos
 

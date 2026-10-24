@@ -39,6 +39,10 @@ Cancelling one dated MTCC leg is simulated on a copy; the baseline is never chan
 - **Timetable validity.** `validFrom` / `validTo` are assumed from the timetable file dates (to 2026-12-31), because the PDFs print no effective dates.
 - Inferred validity projects August 2025 patterns onto 2026.
 
+## Map layers
+The map uses OneMap island footprints (OneMap Data Usage License) and atoll outlines derived from COD-AB v02 / OneMap island polygons (convex hulls). Both are for display only; the outlines are not legal or reef boundaries.
+
 ## What the real data shows
-Source: integration analysis on a prototype real-data bundle (Rasdhoo–Malé example, Sun 25 Oct 2026). No inferred Rasdhoo→Malé boat departs at or after 10:55 (the latest observed are around 08:32–08:39 and 08:36–08:37, below the 8-day support rule at Rasdhoo). So if the 11:00 MTCC Rasdhoo→Malé is cancelled there is no same-day private recovery in the data; the next inferred departure is 02:32–02:38 the following day. Thoddoo→Malé, by contrast, has a direct inferred service, e.g. 08:02–08:09 → 09:12–09:40 (8 devices, 22 days) and 01:50–01:59 → 02:59–03:25 (10 devices, 30 days), against an MTCC journey with a 200-minute wait at Rasdhoo.
-TODO(numbers): confirm against final bundle.
+Thoddoo→Malé, Sun 25 Oct 2026. Official: MTCC 06:30 → Rasdhoo 07:40, a 200-minute wait (flagged Long), then 11:00 → Malé 14:10. Inferred: a direct Thoddoo→Malé service 08:02–08:09 → 09:12–09:40 (8 devices, 22 days), arriving 270–298 minutes earlier.
+
+Cancelling the 11:00 Rasdhoo→Malé: the only inferred Rasdhoo→Malé legs depart 01:31–01:40 (3 devices, 9 days) and 02:32–02:38 (5 devices, 8 days). So there is no same-day private recovery from Rasdhoo; the recovery found is the next day's early boat. Its connections are already Safe, so the app shows "No shift needed: recovery connections are already Safe".
