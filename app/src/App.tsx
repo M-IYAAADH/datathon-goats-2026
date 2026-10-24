@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Banner } from './components/Banner';
+import { DisruptionPanel, type Scenario } from './components/DisruptionPanel';
 import { Header } from './components/Header';
 import { HowItWorks } from './components/HowItWorks';
 import { JourneyList } from './components/JourneyList';
@@ -31,6 +32,7 @@ export function App() {
   const [query, setQuery] = useState<JourneyQuery | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [results, setResults] = useState<Journey[] | null>(null);
+  const [scenario, setScenario] = useState<Scenario | null>(null);
   const [view, setView] = useState<View>('plan');
   const { theme, toggle } = useTheme();
 
@@ -57,10 +59,16 @@ export function App() {
     setSelectedId(found[0]?.id ?? null);
   }
 
+  // During a simulated cancellation the map shows the new best route instead of the selection.
   const highlightLegIds = useMemo(() => {
-    const sel = results?.find((j) => j.id === selectedId);
+    const sel = scenario ? scenario.result.newBest : results?.find((j) => j.id === selectedId);
     return sel ? sel.rides.flatMap((r) => r.occurrences.map((o) => o.leg.id)) : NO_IDS;
-  }, [results, selectedId]);
+  }, [results, selectedId, scenario]);
+
+  const cancelledLegIds = useMemo(
+    () => (scenario ? [scenario.cancelled.leg.id] : NO_IDS),
+    [scenario],
+  );
 
   return (
     <div className="app">
@@ -117,12 +125,8 @@ export function App() {
               <p className="placeholder">Results appear here after you plan a journey.</p>
             )}
           </div>
-          {/* U6: DisruptionPanel goes here */}
-          {ready && (
-            <div className="card region">
-              <HowItWorks config={ready.config} />
-            </div>
-          )}
+          {ready && <DisruptionPanel bundle={ready} query={query} onScenarioChange={setScenario} />}
+          {ready && <HowItWorks config={ready.config} />}
         </section>
         {/* Stays mounted when hidden on mobile so MapLibre is not recreated; hidden
             panels keep their size (visibility, not display) so no resize is needed. */}
@@ -136,6 +140,7 @@ export function App() {
               legs={ready?.legs ?? NO_LEGS}
               config={ready?.config}
               highlightLegIds={highlightLegIds}
+              cancelledLegIds={cancelledLegIds}
             />
           </div>
         </section>
