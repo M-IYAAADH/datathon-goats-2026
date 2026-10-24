@@ -45,7 +45,7 @@ tools/                    lead's Python data-build scripts (build_shapes.py); os
 - **Never mutate the baseline bundle.** Cancellations and shifts return new views, and Reset must restore results exactly.
 - **Data must not need code changes.** The lead swaps sample JSON for real JSON near 15:00. Build only against the contract shape. On bad data the loader must name the file and the field, never leave a blank page.
 - **Honesty labels (required UI text).** Inferred legs say "inferred service" with device and day counts, and are never called "scheduled" or "cancelled". Cancellation is labelled "Simulated cancellation". Shift proposals carry "Recommendation for MTCC to approve. Nothing changes automatically." When nothing is found, say so ("No alternative found in the data", "No safe shift"); never invent a result. Hide inferred legs below `minDevices` / `minDays`. Show the "SAMPLE DATA" banner when `meta.fixture` is true.
-- **Privacy.** No device IDs, tracks, individual coordinates or API keys in the repo or the bundle. Keep the repo private until the organisers confirm.
+- **Privacy.** No device IDs, tracks, individual coordinates or API keys in the repo or the bundle. The repo is public on purpose: it's a public datathon and the data is supplied by the organisers.
 - **Map** must work offline: points and lines over a plain background, with an SVG fallback if WebGL fails. Official legs are solid lines, inferred legs dashed, the cancelled leg red.
 - **Accessibility and mobile.** Status uses text as well as colour. Controls are keyboard-reachable. Layout works at 390 px wide with no horizontal scroll.
 
