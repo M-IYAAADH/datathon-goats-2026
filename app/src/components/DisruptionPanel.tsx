@@ -227,10 +227,9 @@ export function DisruptionPanel({ bundle, query, onScenarioChange }: Props) {
                   <li key={`${c.arriving.id}>${c.departing.id}`} className="dp-item">
                     <strong>{stopName(c.stop)}</strong>
                     <span>
-                      {stopName(c.arriving.leg.from)} → {stopName(c.arriving.leg.to)}{' '}
-                      {formatHHMM(c.arriving.dep.min)}–{fmtRange(c.arriving.arr)}, then{' '}
-                      {stopName(c.departing.leg.from)} → {stopName(c.departing.leg.to)}{' '}
-                      {fmtRange(c.departing.dep)}–{fmtRange(c.departing.arr)}
+                      {stopName(c.arriving.leg.from)} → {stopName(c.arriving.leg.to)}, arr{' '}
+                      {fmtRange(c.arriving.arr)} · next boat to {stopName(c.departing.leg.to)} dep{' '}
+                      {fmtRange(c.departing.dep)}
                     </span>
                   </li>
                 ))}

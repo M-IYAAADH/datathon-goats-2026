@@ -46,6 +46,7 @@ function RideRow({ ride, name }: { ride: Ride; name: (id: string) => string }) {
   const official = ride.source === 'mtcc';
   const evidence = official ? null : evidenceText(ride);
   const routeId = ride.occurrences[0]?.leg.routeId ?? '';
+  const cls = ride.occurrences[0]?.leg.cls ?? null;
   const intermediate = ride.occurrences.slice(0, -1).map((o) => name(o.leg.to));
   return (
     <li className="tl-ride">
@@ -53,9 +54,15 @@ function RideRow({ ride, name }: { ride: Ride; name: (id: string) => string }) {
         <span className={`pill ${official ? 'pill-info' : 'pill-inferred'}`}>
           {official ? 'Official MTCC ferry' : 'Inferred service'}
         </span>
-        <span className="tl-ride-id">
-          Route {routeId} · Trip {ride.tripId}
-        </span>
+        {official ? (
+          <span className="tl-ride-id">
+            Route {routeId} · Trip {ride.tripId}
+          </span>
+        ) : (
+          <span className="tl-ride-id" title={`Route ${routeId} · Trip ${ride.tripId}`}>
+            Private speedboat (inferred){cls ? ` · ${cls}` : ''}
+          </span>
+        )}
       </div>
       <div className="tl-stops">
         <p className="tl-stop">
