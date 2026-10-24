@@ -71,10 +71,11 @@ export function PlannerForm({ stops, defaultDate = DEFAULT_DATE, onSubmit, disab
 
   return (
     <form className="planner-form" onSubmit={handleSubmit} noValidate>
-      <div className="field">
+      <div className="field planner-origin">
         <label className="field-label" htmlFor={ids.origin}>Origin</label>
         <select
           id={ids.origin}
+          className="select"
           value={origin}
           onChange={(e) => setOrigin(e.target.value)}
           disabled={disabled}
@@ -85,16 +86,37 @@ export function PlannerForm({ stops, defaultDate = DEFAULT_DATE, onSubmit, disab
         </select>
       </div>
 
-      <div className="field field-swap">
-        <button type="button" onClick={swap} disabled={disabled} aria-label="Swap origin and destination">
-          Swap
+      <div className="planner-swap">
+        <button
+          type="button"
+          className="btn btn-icon planner-swap-btn"
+          onClick={swap}
+          disabled={disabled}
+          aria-label="Swap origin and destination"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M4 8h16M20 8l-4-4M20 8l-4 4" />
+            <path d="M20 16H4M4 16l4-4M4 16l4 4" />
+          </svg>
         </button>
       </div>
 
-      <div className="field">
+      <div className="field planner-destination">
         <label className="field-label" htmlFor={ids.destination}>Destination</label>
         <select
           id={ids.destination}
+          className="select"
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
           disabled={disabled}
@@ -105,10 +127,11 @@ export function PlannerForm({ stops, defaultDate = DEFAULT_DATE, onSubmit, disab
         </select>
       </div>
 
-      <div className="field">
+      <div className="field planner-date">
         <label className="field-label" htmlFor={ids.date}>Date</label>
         <input
           id={ids.date}
+          className="input"
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
@@ -116,10 +139,11 @@ export function PlannerForm({ stops, defaultDate = DEFAULT_DATE, onSubmit, disab
         />
       </div>
 
-      <div className="field">
+      <div className="field planner-time">
         <label className="field-label" htmlFor={ids.time}>Earliest departure</label>
         <input
           id={ids.time}
+          className="input"
           type="time"
           value={time}
           onChange={(e) => setTime(e.target.value)}
@@ -127,9 +151,9 @@ export function PlannerForm({ stops, defaultDate = DEFAULT_DATE, onSubmit, disab
         />
       </div>
 
-      <div className="field field-submit">
-        <button type="submit" disabled={disabled}>Plan</button>
-      </div>
+      <button type="submit" className="btn btn-primary planner-submit" disabled={disabled}>
+        Plan journey
+      </button>
 
       {error && (
         <p className="form-error" id={ids.error} role="alert">

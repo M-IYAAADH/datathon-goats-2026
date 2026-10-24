@@ -1,7 +1,104 @@
-import type { Journey } from '../data/planner';
+import type { TimeRange } from '../data/load';
+import { formatHHMM, type Journey } from '../data/planner';
+import './JourneyList.css';
 
-// Placeholder with the agreed interface; replaced by task UR-B.
-export function JourneyList({ journeys, searched }: { journeys: Journey[]; searched: boolean }) {
-  if (!searched) return <p>Results will appear here.</p>;
-  return <p>{journeys.length} journeys</p>;
+type Props = { journeys: Journey[]; searched: boolean };
+
+const ARROW = '→';
+const DASH = '–';
+
+function formatRange(r: TimeRange): string {
+  return r.min === r.max ? formatHHMM(r.min) : `${formatHHMM(r.min)}${DASH}${formatHHMM(r.max)}`;
+}
+
+function formatMinutes(total: number): string {
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return `${m} min`;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
+
+function formatDuration(j: Journey): string {
+  const lo = Math.max(0, j.arriveMin.min - j.departMin.max);
+  const hi = Math.max(lo, j.arriveMin.max - j.departMin.min);
+  return lo === hi ? formatMinutes(hi) : `${formatMinutes(lo)}${DASH}${formatMinutes(hi)}`;
+}
+
+function formatTransfers(n: number): string {
+  if (n === 0) return 'Direct';
+  return n === 1 ? '1 transfer' : `${n} transfers`;
+}
+
+function EmptyIcon() {
+  return (
+    <svg
+      className="journey-empty-icon"
+      viewBox="0 0 24 24"
+      width="32"
+      height="32"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M3 18c2 0 2-1.5 4.5-1.5S10 18 12 18s2.5-1.5 4.5-1.5S19 18 21 18" />
+      <path d="M5 14l1-5h12l1 5" />
+      <path d="M12 9V4" />
+    </svg>
+  );
+}
+
+export function JourneyList({ journeys, searched }: Props) {
+  if (!searched) {
+    return (
+      <div className="journey-empty">
+        <EmptyIcon />
+        <p>Choose an origin and destination to plan a journey.</p>
+      </div>
+    );
+  }
+
+  if (journeys.length === 0) {
+    return (
+      <div className="journey-empty" role="status">
+        <p>No journey found.</p>
+        <p className="journey-empty-note">(Router not connected yet: waiting for R4.)</p>
+      </div>
+    );
+  }
+
+  return (
+    <ol className="journey-list" aria-label="Journey options">
+      {journeys.map((j, i) => (
+        <li key={j.id} className="journey-card card">
+          <div className="journey-head">
+            <p className="journey-times">
+              {formatRange(j.departMin)} {ARROW} {formatRange(j.arriveMin)}
+            </p>
+            {i === 0 && <span className="pill">Earliest arrival</span>}
+          </div>
+          <p className="journey-meta">
+            {formatDuration(j)} · {formatTransfers(j.transfers)}
+          </p>
+          <ul className="journey-legs" aria-label="Legs">
+            {j.legs.map((leg) => (
+              <li key={leg.id} className="journey-leg">
+                <span>
+                  {leg.from} {ARROW} {leg.to}
+                </span>
+                {leg.source === 'mtcc' ? (
+                  <span className="pill pill-info">Official</span>
+                ) : (
+                  <span className="pill pill-inferred">Inferred service</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ol>
+  );
 }
