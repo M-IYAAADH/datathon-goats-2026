@@ -5,7 +5,12 @@ import config from '../../public/data/config.json';
 import census from '../../public/data/census.json';
 import meta from '../../public/data/meta.json';
 import { validateBundle } from './load';
-import { applyCancellation, compareReachability, MTCC_APPROVAL_NOTE, proposeShifts } from '../router/disruption';
+import {
+  applyCancellation,
+  compareReachability,
+  MTCC_APPROVAL_NOTE,
+  proposeShifts,
+} from '../router/disruption';
 import { findJourneys } from '../router/planner';
 import { expandOccurrences } from '../router/time';
 import type { Connection } from '../router/model';
@@ -56,14 +61,20 @@ describe('demo disruption on the real bundle', () => {
     const result = compareReachability(bundle, query, cancelled);
     expect(result.lostJourneys.map((j) => j.id)).toEqual([official]);
     for (const j of result.after) expect(j.id.includes(cancelled)).toBe(false);
-    expect(result.brokenConnections.some((c) => c.arriving.id === toRas && c.departing.id === cancelled)).toBe(true);
+    expect(
+      result.brokenConnections.some((c) => c.arriving.id === toRas && c.departing.id === cancelled),
+    ).toBe(true);
     expect(result.newBest?.id).toBe(direct);
     expect(result.recovery.every((j) => j.usesInferred)).toBe(true);
 
     // No inferred Rasdhoo -> Malé boat on the same day at or after 10:55.
     const disrupted = applyCancellation(baseline(), cancelled);
     const rasInf = disrupted.filter(
-      (o) => o.leg.source === 'inferred' && o.leg.from === 'RASDHOO' && o.leg.to === 'MALE' && o.serviceDate === DATE,
+      (o) =>
+        o.leg.source === 'inferred' &&
+        o.leg.from === 'RASDHOO' &&
+        o.leg.to === 'MALE' &&
+        o.serviceDate === DATE,
     );
     expect(rasInf.every((o) => o.dep.min < 655)).toBe(true);
     expect(rasInf.map((o) => o.dep)).toEqual([{ min: 91, max: 100 }]);
@@ -74,7 +85,9 @@ describe('demo disruption on the real bundle', () => {
     const disrupted = applyCancellation(baseline(), cancelled);
     // DisruptionPanel only asks for shifts on non-Safe transfers fed by an MTCC ride in the recovery.
     const targets = result.recovery.flatMap((j) =>
-      j.transfers.filter((t) => t.assessment.status !== 'safe' && j.rides[t.fromRide].source === 'mtcc'),
+      j.transfers.filter(
+        (t) => t.assessment.status !== 'safe' && j.rides[t.fromRide].source === 'mtcc',
+      ),
     );
     expect(targets).toEqual([]);
 
@@ -89,7 +102,10 @@ describe('demo disruption on the real bundle', () => {
       departing: off.rides[t.toRide].occurrences[0],
       assessment: t.assessment,
     };
-    for (const shifts of [proposeShifts(bundle, occs, target), proposeShifts(bundle, disrupted, target)]) {
+    for (const shifts of [
+      proposeShifts(bundle, occs, target),
+      proposeShifts(bundle, disrupted, target),
+    ]) {
       expect(shifts.rejected).toEqual([]);
       for (const p of shifts.proposals) {
         expect(p.occurrenceId).toBe(toRas);
