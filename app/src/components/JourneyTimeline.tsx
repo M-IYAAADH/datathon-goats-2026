@@ -49,9 +49,9 @@ function RideRow({ ride, name }: { ride: Ride; name: (id: string) => string }) {
   const cls = ride.occurrences[0]?.leg.cls ?? null;
   const intermediate = ride.occurrences.slice(0, -1).map((o) => name(o.leg.to));
   return (
-    <li className="tl-ride">
+    <li className={`tl-ride leg${official ? '' : ' inferred'}`}>
       <div className="tl-ride-head">
-        <span className={`pill ${official ? 'pill-info' : 'pill-inferred'}`}>
+        <span className={`mode pill ${official ? 'pill-info' : 'pill-inferred'}`}>
           {official ? 'Official MTCC ferry' : 'Inferred service'}
         </span>
         {official ? (
@@ -158,7 +158,7 @@ function WaitRow({
   const a = transfer.assessment;
   const barPct = Math.min(100, Math.round((a.waitMin[1] / BAR_CAP_MIN) * 100));
   return (
-    <li className="tl-wait">
+    <li className={`tl-wait xfer${a.long ? ' long' : ''}`}>
       <div className="tl-wait-head">
         <span className="tl-wait-label">
           Wait at {name(transfer.stop)}: {formatMinuteRange(a.waitMin)}

@@ -77,7 +77,7 @@ export function JourneyList({ journeys, searched, bundle, query, selectedId, onS
         const longWait = j.transfers.some((t) => t.assessment.long);
         const panelId = `journey-detail-${i}`;
         return (
-          <li key={j.id} className={`journey-card card${selected ? ' journey-selected' : ''}`}>
+          <li key={j.id} className={`opt journey-card${selected ? ' sel journey-selected' : ''}`}>
             <button
               type="button"
               className="journey-select"
@@ -91,10 +91,10 @@ export function JourneyList({ journeys, searched, bundle, query, selectedId, onS
                   {formatRange(j.dep)} {ARROW} {formatRange(j.arr)}
                 </span>
                 <span className="journey-badges">
-                  {i === 0 && <span className="pill">Earliest arrival</span>}
-                  {longWait && <span className="pill pill-longwait">Long wait</span>}
+                  {i === 0 && <span className="pill badge ok">Earliest arrival</span>}
+                  {longWait && <span className="pill pill-longwait badge warn">Long wait</span>}
                   {j.usesInferred && (
-                    <span className="pill pill-inferred">Uses inferred service</span>
+                    <span className="pill pill-inferred badge info">Uses inferred service</span>
                   )}
                 </span>
               </span>

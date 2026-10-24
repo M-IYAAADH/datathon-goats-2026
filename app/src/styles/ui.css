@@ -131,3 +131,86 @@
   background: var(--color-sample-soft);
   color: var(--color-sample);
 }
+
+/* ---- Reference look: compact controls, notes, section headings ---- */
+.btn {
+  min-height: 0;
+  padding: 6px 12px;
+  border: 1px solid var(--line2);
+  border-radius: 7px;
+  background: var(--panel);
+  font-weight: 500;
+}
+
+.btn-primary,
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.btn-icon {
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
+}
+
+.field,
+label.f {
+  gap: 3px;
+}
+
+.field-label,
+label.f {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink2);
+}
+
+.input,
+.select {
+  min-height: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--line2);
+  border-radius: 7px;
+}
+
+.card {
+  border-color: var(--line);
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.pill {
+  padding: 2px 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.pill-info,
+.pill-inferred,
+.badge.info {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.pill-inferred {
+  background: color-mix(in srgb, var(--speed) 12%, transparent);
+  color: var(--speed);
+}
+
+.tabbody h3 {
+  margin: 18px 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink3);
+}
