@@ -53,7 +53,7 @@ The bundle is limited to the central study region: atolls AA, ADh, K, V and Grea
 - `islands.geojson`: island footprints from OneMap (OneMap Data Usage License).
 - `atolls.geojson`: convex hulls of the COD-AB v02 / OneMap island polygons. Display only; not a legal or reef boundary.
 
-TODO(numbers): region bundle counts. For reference, the nationwide bundle before the region cut had 143 stops and 342 legs (311 MTCC, 31 inferred).
+Region bundle (`buildVersion` `2026-10-24T17:00+05:00`, `fixture: false`): 34 stops (AA 8, ADh 10, K 9, Greater Malé 2, V 5), 120 legs (89 MTCC, 31 inferred), 34 Census entries. `islands.geojson` has 379 OneMap island polygons, 34 of them flagged `isStop`; `atolls.geojson` has 5 atoll hulls. The region cut removed only whole MTCC routes outside the region; routes 301–310 are kept complete. For reference, the nationwide bundle before the cut had 143 stops and 342 legs (311 MTCC, 31 inferred).
 
 ## How the data is regenerated
 
