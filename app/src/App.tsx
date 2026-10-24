@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Banner } from './components/Banner';
 import { MapView } from './components/MapView';
-import { loadBundle, type Bundle, type Leg, type Stop } from './data/load';
+import { PlannerForm } from './components/PlannerForm';
+import { loadBundle, type Bundle, type Leg, type Stop, type TimeRange } from './data/load';
+import { findJourneys, formatHHMM, type Journey, type JourneyQuery } from './data/planner';
 
 type LoadState =
   | { status: 'loading' }
@@ -16,8 +18,14 @@ const HONESTY_TEXT =
 const NO_STOPS: Stop[] = [];
 const NO_LEGS: Leg[] = [];
 
+function formatRange(r: TimeRange): string {
+  return r.min === r.max ? formatHHMM(r.min) : `${formatHHMM(r.min)}–${formatHHMM(r.max)}`;
+}
+
 export function App() {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
+  const [, setQuery] = useState<JourneyQuery | null>(null);
+  const [results, setResults] = useState<Journey[] | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -33,6 +41,12 @@ export function App() {
   }, []);
 
   const ready = state.status === 'ready' ? state.bundle : null;
+
+  function handleSubmit(q: JourneyQuery) {
+    if (!ready) return;
+    setQuery(q);
+    setResults(findJourneys(ready, q));
+  }
 
   return (
     <div className="app">
@@ -62,10 +76,32 @@ export function App() {
       <main className="layout">
         <section className="panel panel-left" aria-label="Planner">
           <div className="region region-form" id="planner-form" aria-label="Planner form">
-            <p className="placeholder">Planner form goes here.</p>
+            {ready ? (
+              <PlannerForm stops={ready.stops} onSubmit={handleSubmit} />
+            ) : (
+              <p className="placeholder">
+                {state.status === 'loading' ? 'Planner available once data has loaded.' : 'Planner unavailable.'}
+              </p>
+            )}
           </div>
           <div className="region region-results" id="results" aria-label="Results" aria-live="polite">
-            <p className="placeholder">Results will appear here.</p>
+            {results === null ? (
+              <p className="placeholder">Results will appear here.</p>
+            ) : results.length === 0 ? (
+              <>
+                <p>No journey found.</p>
+                <p className="placeholder">(Router not connected yet: waiting for R4.)</p>
+              </>
+            ) : (
+              <ul className="journey-list">
+                {results.map((j) => (
+                  <li key={j.id}>
+                    {formatRange(j.departMin)} → {formatRange(j.arriveMin)},{' '}
+                    {j.transfers} {j.transfers === 1 ? 'transfer' : 'transfers'}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </section>
         <section className="panel panel-right" aria-label="Map">
