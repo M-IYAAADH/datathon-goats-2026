@@ -1,0 +1,10 @@
+[
+  { "id": "MATHIVERI", "name": "Mathiveri", "atoll": "Alif Alif", "lat": 4.1917, "lon": 72.7464, "censusKey": "AA-MATHIVERI", "kind": "island" },
+  { "id": "BODUFOLHUDHOO", "name": "Bodufolhudhoo", "atoll": "Alif Alif", "lat": 4.1867, "lon": 72.7744, "censusKey": "AA-BODUFOLHUDHOO", "kind": "island" },
+  { "id": "UKULHAS", "name": "Ukulhas", "atoll": "Alif Alif", "lat": 4.2153, "lon": 72.8622, "censusKey": "AA-UKULHAS", "kind": "island" },
+  { "id": "RASDHOO", "name": "Rasdhoo", "atoll": "Alif Alif", "lat": 4.2633, "lon": 72.9917, "censusKey": "AA-RASDHOO", "kind": "island" },
+  { "id": "THODDOO", "name": "Thoddoo", "atoll": "Alif Alif", "lat": 4.4381, "lon": 72.9572, "censusKey": "AA-THODDOO", "kind": "island" },
+  { "id": "MAAFUSHI", "name": "Maafushi", "atoll": "Kaafu", "lat": 3.9431, "lon": 73.4903, "censusKey": "K-MAAFUSHI", "kind": "island" },
+  { "id": "GULHI", "name": "Gulhi", "atoll": "Kaafu", "lat": 3.9900, "lon": 73.5069, "censusKey": "K-GULHI", "kind": "island" },
+  { "id": "MALE", "name": "Malé", "atoll": "Kaafu", "lat": 4.1755, "lon": 73.5093, "censusKey": null, "kind": "hub" }
+]

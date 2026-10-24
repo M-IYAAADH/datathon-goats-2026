@@ -33,7 +33,7 @@ If you finish your lane, take any open task. Ask in the group chat before taking
 |---|---|---|---|---|
 | [x] 14:45 | X0 | Scaffold Vite + React + TypeScript app, add `maplibre-gl` and `vitest`, scripts `dev`, `build`, `test`, `preview` | `app/package.json`, `app/tsconfig.json`, `app/vite.config.ts`, `app/index.html`, `app/src/main.tsx` | `npm install && npm run dev` shows a blank page, `npm test` runs |
 | [ ] | R1 | Types: write `app/src/router/model.ts` from SRS section 4 (`Stop`, `Leg`, `Config`, `Census`, `Meta`, `Bundle`, `Occurrence`, `Journey`, `TransferAssessment`, `ScenarioResult`) | `app/src/router/model.ts` | Compiles. Post "model.ts is in" in the group chat. UI starts using it |
-| [~] Member B 15:34 | X1 | Sample data: five JSON files in the exact contract shape with `meta.fixture: true`. Include the demo islands (Mathiveri, Bodufolhudhoo, Ukulhas, Rasdhoo, Thoddoo, Maafushi, Gulhi, Malé), the official legs from SRS T7, T8, T9, and two clearly fake inferred legs (Rasdhoo to Malé 11:10 to 11:30 and 12:20 to 12:50, `cls: "fast"`) | `app/public/data/*.json` | Files validate against `model.ts`. T7, T8, T9 scenarios are possible with them |
+| [x] Member B 15:37 | X1 | Sample data: five JSON files in the exact contract shape with `meta.fixture: true`. Include the demo islands (Mathiveri, Bodufolhudhoo, Ukulhas, Rasdhoo, Thoddoo, Maafushi, Gulhi, Malé), the official legs from SRS T7, T8, T9, and two clearly fake inferred legs (Rasdhoo to Malé 11:10 to 11:30 and 12:20 to 12:50, `cls: "fast"`) | `app/public/data/*.json` | Files validate against `model.ts`. T7, T8, T9 scenarios are possible with them |
 
 ## 1. Router lane (Member A)
 
@@ -93,3 +93,8 @@ If you finish your lane, take any open task. Ask in the group chat before taking
 
 - All npm commands run inside `app/` (`cd app`). The old single-file Leaflet prototype now lives in `prototype/index.html` for reference only; do not build on it. `tools/` holds the lead's data-build scripts.
 - Vitest runs `src/**/*.test.ts` in Node (no DOM) and passes when there are no test files yet.
+- X1 sample data notes (for Lead and Member A):
+  - Only `meta.json` has `buildVersion`. `stops.json` and `legs.json` are bare arrays, so the U1 "same buildVersion in all files" check has nothing to compare. Decide whether the contract should change.
+  - The sample inferred Rasdhoo to Malé boats (dep 11:10–11:30, 12:20–12:50) reach Malé before the MTCC 14:10. A router ranking by `arr.max` lists the inferred option first for T7 and T8.
+  - T12: after cancelling Rasdhoo to Malé 11:00, the Mathiveri 10:55 arrival is already Safe onto the 11:10 inferred boat (10:55 + 15). With sample data, no shift is proposed. Demo step 4 needs a later or tighter inferred departure to show a shift.
+  - Route 308 (Thoddoo) and the 309 weekdays are made up. Kaafu census keys use a `K-` prefix.
