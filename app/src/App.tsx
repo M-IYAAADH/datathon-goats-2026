@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Banner } from './components/Banner';
+import { MapView, type Leg, type MapConfig, type Stop } from './components/MapView';
 
 // TODO(U1): replace with loadBundle() from src/data/load.ts
 type MetaLite = { fixture: boolean };
@@ -30,8 +31,49 @@ async function fetchMeta(): Promise<MetaLite> {
   return { fixture: (body as MetaLite).fixture };
 }
 
+type MapData = { stops: Stop[]; legs: Leg[]; config: MapConfig };
+
+type MapDataState =
+  | { status: 'loading' }
+  | { status: 'ready'; data: MapData }
+  | { status: 'error'; message: string };
+
+async function fetchJson(file: string): Promise<unknown> {
+  const res = await fetch(`${import.meta.env.BASE_URL}data/${file}`);
+  if (!res.ok) throw new Error(`${file}: HTTP ${res.status}`);
+  try {
+    return await res.json();
+  } catch {
+    throw new Error(`${file}: not valid JSON (the file may be missing)`);
+  }
+}
+
+// TODO(U1): replace with loadBundle() from src/data/load.ts
+async function fetchMapData(): Promise<MapData> {
+  const [stops, legs, config] = await Promise.all([
+    fetchJson('stops.json'),
+    fetchJson('legs.json'),
+    fetchJson('config.json'),
+  ]);
+  if (!Array.isArray(stops)) throw new Error('stops.json: expected an array of stops');
+  if (!Array.isArray(legs)) throw new Error('legs.json: expected an array of legs');
+  const c = config as Partial<MapConfig> | null;
+  if (typeof c?.minDevices !== 'number' || typeof c.minDays !== 'number') {
+    throw new Error('config.json: field "minDevices" or "minDays" is missing or not a number');
+  }
+  return {
+    stops: stops as Stop[],
+    legs: legs as Leg[],
+    config: { minDevices: c.minDevices, minDays: c.minDays },
+  };
+}
+
+const NO_STOPS: Stop[] = [];
+const NO_LEGS: Leg[] = [];
+
 export function App() {
   const [meta, setMeta] = useState<MetaState>({ status: 'loading' });
+  const [mapData, setMapData] = useState<MapDataState>({ status: 'loading' });
 
   useEffect(() => {
     let active = true;
@@ -40,10 +82,18 @@ export function App() {
       (e: unknown) =>
         active && setMeta({ status: 'error', message: e instanceof Error ? e.message : String(e) }),
     );
+    fetchMapData().then(
+      (d) => active && setMapData({ status: 'ready', data: d }),
+      (e: unknown) =>
+        active &&
+        setMapData({ status: 'error', message: e instanceof Error ? e.message : String(e) }),
+    );
     return () => {
       active = false;
     };
   }, []);
+
+  const ready = mapData.status === 'ready' ? mapData.data : null;
 
   return (
     <div className="app">
@@ -60,12 +110,17 @@ export function App() {
         <Banner kind="info" label="About this data">
           {HONESTY_TEXT}
         </Banner>
-        {meta.status === 'loading' && (
+        {(meta.status === 'loading' || mapData.status === 'loading') && (
           <p className="load-status" role="status">Loading data…</p>
         )}
         {meta.status === 'error' && (
           <p className="load-error" role="alert">
             Could not load data. {meta.message}
+          </p>
+        )}
+        {mapData.status === 'error' && (
+          <p className="load-error" role="alert">
+            Could not load data. {mapData.message}
           </p>
         )}
       </div>
@@ -81,7 +136,11 @@ export function App() {
         </section>
         <section className="panel panel-right" aria-label="Map">
           <div className="region region-map" id="map">
-            <p className="placeholder">Map goes here.</p>
+            <MapView
+              stops={ready?.stops ?? NO_STOPS}
+              legs={ready?.legs ?? NO_LEGS}
+              config={ready?.config}
+            />
           </div>
         </section>
       </main>
