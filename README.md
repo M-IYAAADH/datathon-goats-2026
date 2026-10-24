@@ -86,3 +86,6 @@ What is provided instead: shareable aggregates. Each inferred service carries it
 - Coverage follows the data: stops that could not be matched to a Census island are left out of the bundle.
 
 See `docs/methods.md` for details.
+
+## Sources
+All datasets, map layers and licences: [docs/sources.md](docs/sources.md).
