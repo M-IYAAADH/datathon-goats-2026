@@ -1,24 +1,25 @@
-import type { Bundle, Leg, TimeRange } from './load';
+// The UI's one seam to the router (Member A's lane). No routing logic lives here.
+import { findJourneys as routerFindJourneys } from '../router/planner';
+import type { Bundle, Journey, Query } from '../router/model';
 
-// TODO(R4): replace with types and findJourneys from router/planner.ts
-export type JourneyQuery = {
-  origin: string;
-  destination: string;
-  date: string; // YYYY-MM-DD
-  earliestMin: number; // minutes since midnight, Maldives time
-};
+export type {
+  Connection,
+  Journey,
+  Occurrence,
+  Query,
+  Ride,
+  ScenarioResult,
+  ShiftProposal,
+  ShiftResult,
+  Transfer,
+  TransferAssessment,
+  WaitAlternative,
+  WaitAlternativesResult,
+} from '../router/model';
+export type JourneyQuery = Query;
 
-export type Journey = {
-  id: string;
-  legs: Leg[];
-  departMin: TimeRange;
-  arriveMin: TimeRange;
-  transfers: number;
-};
-
-// Stub: the UI lane holds no routing logic. Always returns no journeys.
-export function findJourneys(_bundle: Bundle, _query: JourneyQuery): Journey[] {
-  return [];
+export function findJourneys(bundle: Bundle, query: Query): Journey[] {
+  return routerFindJourneys(bundle, query);
 }
 
 export function parseHHMM(text: string): number | null {

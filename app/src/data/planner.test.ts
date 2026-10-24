@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { formatHHMM, parseHHMM } from './planner';
+import stops from '../../public/data/stops.json';
+import legs from '../../public/data/legs.json';
+import config from '../../public/data/config.json';
+import census from '../../public/data/census.json';
+import meta from '../../public/data/meta.json';
+import { validateBundle } from './load';
+import { findJourneys, formatHHMM, parseHHMM } from './planner';
 
 describe('parseHHMM', () => {
   it('parses valid times', () => {
@@ -33,5 +39,23 @@ describe('formatHHMM', () => {
 
   it('round-trips with parseHHMM', () => {
     expect(parseHHMM(formatHHMM(755))).toBe(755);
+  });
+});
+
+describe('findJourneys on the sample bundle', () => {
+  const bundle = validateBundle({ stops, legs, config, census, meta });
+
+  it('lists journeys Mathiveri to Malé on Sun 25 Oct (U3 done-when)', () => {
+    const journeys = findJourneys(bundle, {
+      origin: 'MATHIVERI',
+      destination: 'MALE',
+      date: '2026-10-25',
+      earliestDep: 360,
+    });
+    expect(journeys.length).toBeGreaterThan(0);
+    const mtcc = journeys.find((j) => !j.usesInferred);
+    expect(mtcc?.dep.min).toBe(515);
+    expect(mtcc?.arr.min).toBe(850);
+    expect(mtcc?.transfers[0].assessment.status).toBe('safe');
   });
 });

@@ -19,8 +19,8 @@ function formatMinutes(total: number): string {
 }
 
 function formatDuration(j: Journey): string {
-  const lo = Math.max(0, j.arriveMin.min - j.departMin.max);
-  const hi = Math.max(lo, j.arriveMin.max - j.departMin.min);
+  const lo = Math.max(0, j.arr.min - j.dep.max);
+  const hi = Math.max(lo, j.arr.max - j.dep.min);
   return lo === hi ? formatMinutes(hi) : `${formatMinutes(lo)}${DASH}${formatMinutes(hi)}`;
 }
 
@@ -65,7 +65,6 @@ export function JourneyList({ journeys, searched }: Props) {
     return (
       <div className="journey-empty" role="status">
         <p>No journey found.</p>
-        <p className="journey-empty-note">(Router not connected yet: waiting for R4.)</p>
       </div>
     );
   }
@@ -76,16 +75,16 @@ export function JourneyList({ journeys, searched }: Props) {
         <li key={j.id} className="journey-card card">
           <div className="journey-head">
             <p className="journey-times">
-              {formatRange(j.departMin)} {ARROW} {formatRange(j.arriveMin)}
+              {formatRange(j.dep)} {ARROW} {formatRange(j.arr)}
             </p>
             {i === 0 && <span className="pill">Earliest arrival</span>}
           </div>
           <p className="journey-meta">
-            {formatDuration(j)} · {formatTransfers(j.transfers)}
+            {formatDuration(j)} · {formatTransfers(j.transfers.length)}
           </p>
           <ul className="journey-legs" aria-label="Legs">
-            {j.legs.map((leg) => (
-              <li key={leg.id} className="journey-leg">
+            {j.rides.map((leg) => (
+              <li key={leg.tripId + leg.from} className="journey-leg">
                 <span>
                   {leg.from} {ARROW} {leg.to}
                 </span>

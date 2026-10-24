@@ -56,13 +56,13 @@ export function PlannerForm({
       setError('Error: choose a date.');
       return;
     }
-    const earliestMin = parseHHMM(time);
-    if (earliestMin === null) {
+    const earliestDep = parseHHMM(time);
+    if (earliestDep === null) {
       setError('Error: enter an earliest departure time.');
       return;
     }
     setError(null);
-    onSubmit({ origin, destination, date, earliestMin });
+    onSubmit({ origin, destination, date, earliestDep });
   }
 
   const options = sorted.map((s) => (

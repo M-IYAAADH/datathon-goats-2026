@@ -1,84 +1,18 @@
-// TODO(R1): re-export these from router/model.ts once it lands
-export type Stop = {
-  id: string;
-  name: string;
-  atoll: string;
-  lat: number;
-  lon: number;
-  censusKey: string | null;
-  kind: 'island' | 'hub';
-};
+import type {
+  Bundle,
+  Census,
+  CensusEntry,
+  Config,
+  Evidence,
+  Leg,
+  Meta,
+  Range,
+  Stop,
+} from '../router/model';
 
-export type TimeRange = { min: number; max: number };
-
-export type Evidence = {
-  devices: number;
-  days: number;
-  weekdayObs: number[];
-  period: string;
-  unconfirmedOriginShare: number;
-};
-
-export type Leg = {
-  id: string;
-  source: 'mtcc' | 'inferred';
-  routeId: string;
-  tripId: string;
-  from: string;
-  to: string;
-  dep: TimeRange;
-  arr: TimeRange;
-  days: number[];
-  validFrom: string;
-  validTo: string;
-  cls: 'fast' | 'slow' | null;
-  evidence: Evidence | null;
-};
-
-export type Config = {
-  timezone: string;
-  bufferOfficialMin: number;
-  bufferInferredMin: number;
-  longWaitMin: number;
-  maxTransfers: number;
-  horizonHours: number;
-  shiftStepMin: number;
-  maxShiftMin: number;
-  minDevices: number;
-  minDays: number;
-};
-
-export type CensusEntry = {
-  name: string;
-  population: number;
-  male: number;
-  female: number;
-  age0_17: number;
-  age18_64: number;
-  age65p: number;
-  disability: number;
-  elderlyAlone: number;
-};
-
-export type Census = Record<string, CensusEntry>;
-
-export type Meta = {
-  buildVersion: string;
-  fixture: boolean;
-  evidencePeriod: string;
-  timezoneStatus: string;
-  speedUnitStatus: string;
-  clockCorrections: number;
-  timetableYear: number;
-};
-
-export type Bundle = {
-  stops: Stop[];
-  legs: Leg[];
-  config: Config;
-  census: Census;
-  meta: Meta;
-};
+// The data contract lives in router/model.ts (R1); the loader re-exports it for the UI.
+export type { Bundle, Census, CensusEntry, Config, Evidence, Leg, Meta, Stop };
+export type TimeRange = Range;
 
 export const BUNDLE_FILES = [
   'stops.json',
@@ -306,7 +240,7 @@ function validateConfig(raw: unknown): Config {
   const o = c.obj(raw, '');
   c.str(o, 'timezone', '');
   for (const key of CONFIG_NUMBERS) c.num(o, key, '');
-  return o as Config;
+  return o as unknown as Config;
 }
 
 function validateCensus(raw: unknown): Census {
@@ -331,7 +265,7 @@ function validateMeta(raw: unknown): Meta {
   c.str(o, 'speedUnitStatus', '');
   c.num(o, 'clockCorrections', '');
   c.int(o, 'timetableYear', '');
-  return o as Meta;
+  return o as unknown as Meta;
 }
 
 function checkBuildVersion(
