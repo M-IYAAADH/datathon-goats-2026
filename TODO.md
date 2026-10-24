@@ -106,7 +106,7 @@ If you finish your lane, take any open task. Ask in the group chat before taking
 - X1 sample data notes (for Lead and Member A):
   - Only `meta.json` has `buildVersion`. `stops.json` and `legs.json` are bare arrays, so the U1 "same buildVersion in all files" check has nothing to compare. Decide whether the contract should change.
   - The sample inferred Rasdhoo to Malé boats (dep 11:10–11:30, 12:20–12:50) reach Malé before the MTCC 14:10. A router ranking by `arr.max` lists the inferred option first for T7 and T8.
-  - T12: after cancelling Rasdhoo to Malé 11:00, the Mathiveri 10:55 arrival is already Safe onto the 11:10 inferred boat (10:55 + 15). With sample data, no shift is proposed. Demo step 4 needs a later or tighter inferred departure to show a shift.
+  - T12: the inferred 11:10–11:30 boat was moved to 11:05–11:30 so that, after cancelling Rasdhoo to Malé 11:00, the 10:55 arrival is Possible (not Safe) and the router proposes a 5-min-earlier MTCC shift. Covered by `src/data/demo.test.ts`.
   - Route 308 (Thoddoo) and the 309 weekdays are made up. Kaafu census keys use a `K-` prefix.
 - U5: map shows a dashed, offset inferred line next to the official line on a pair both serve (Rasdhoo to Malé). Not yet checked visually in a browser or with WebGL off. Stop clicks work with a mouse only (keyboard comes in U7).
 - U1: the contract types live in `app/src/data/load.ts` until R1 lands. Member A: when you write `router/model.ts`, match these shapes (or tell Member B), and load.ts will re-export from model.ts.

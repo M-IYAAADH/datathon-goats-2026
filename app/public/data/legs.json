@@ -29,7 +29,7 @@
     "days": [0, 1, 2, 3, 4, 6], "validFrom": "2026-01-01", "validTo": "2026-12-31", "cls": null, "evidence": null },
   { "id": "inf-rasdhoo-male-1", "source": "inferred", "routeId": "inf-RASDHOO-MALE", "tripId": "inf-rasdhoo-male-1",
     "from": "RASDHOO", "to": "MALE",
-    "dep": { "min": 670, "max": 690 }, "arr": { "min": 745, "max": 790 },
+    "dep": { "min": 665, "max": 690 }, "arr": { "min": 745, "max": 790 },
     "days": [0, 2, 3, 6], "validFrom": "2026-01-01", "validTo": "2026-12-31", "cls": "fast",
     "evidence": { "devices": 6, "days": 11, "weekdayObs": [3, 0, 2, 3, 0, 0, 3], "period": "2025-08", "unconfirmedOriginShare": 0.1 } },
   { "id": "inf-rasdhoo-male-2", "source": "inferred", "routeId": "inf-RASDHOO-MALE", "tripId": "inf-rasdhoo-male-2",
