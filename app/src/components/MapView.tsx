@@ -4,13 +4,19 @@ import {
   LngLatBounds,
   Map as MlMap,
   Marker,
+  setWorkerUrl,
   type GeoJSONSource,
   type MapOptions,
 } from 'maplibre-gl';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import type { Leg, Stop } from '../data/load';
 import { readMapColors, useMapColors, type MapColors } from '../hooks/useMapColors';
 import { Legend } from './Legend';
 import './MapView.css';
+
+// Vite pre-bundles maplibre-gl, which breaks its default worker lookup (next to its own
+// module); point it at the worker file explicitly so GeoJSON sources load.
+setWorkerUrl(workerUrl);
 
 export type MapConfig = { minDevices: number; minDays: number };
 
