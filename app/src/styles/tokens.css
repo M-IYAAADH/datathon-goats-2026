@@ -38,6 +38,10 @@
   --map-stop: #0f1f24;
   --map-hub: #0b6e78;
   --map-halo: #ffffff;
+  --map-land: #efe6cf;
+  --map-land-stop: #e3d3a8;
+  --map-land-outline: #b9a77a;
+  --map-atoll: #5f8f9a;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -109,6 +113,10 @@
     --map-stop: #e6eef0;
     --map-hub: #4cc3c9;
     --map-halo: #0d1517;
+    --map-land: #2a3a33;
+    --map-land-stop: #3a4d40;
+    --map-land-outline: #56705f;
+    --map-atoll: #5d8a94;
 
     --shadow-1: 0 1px 2px rgb(0 0 0 / 40%);
     --shadow-2: 0 4px 12px rgb(0 0 0 / 45%);
@@ -154,6 +162,10 @@
   --map-stop: #e6eef0;
   --map-hub: #4cc3c9;
   --map-halo: #0d1517;
+  --map-land: #2a3a33;
+  --map-land-stop: #3a4d40;
+  --map-land-outline: #56705f;
+  --map-atoll: #5d8a94;
 
   --shadow-1: 0 1px 2px rgb(0 0 0 / 40%);
   --shadow-2: 0 4px 12px rgb(0 0 0 / 45%);
