@@ -13,13 +13,19 @@ import { findJourneys, findWaitAlternatives } from './planner';
 
 const bundle = { stops, legs, config, census, meta } as unknown as Bundle;
 const q = (origin: string, date: string, extra: Partial<Query> = {}): Query => ({
-  origin, destination: 'MALE', date, earliestDep: 0, ...extra,
+  origin,
+  destination: 'MALE',
+  date,
+  earliestDep: 0,
+  ...extra,
 });
 const shape = (j: Journey) => j.rides.map((r) => [r.from, r.dep.min, r.to, r.arr.max]);
 
 beforeAll(() => {
   if (!Array.isArray(bundle.legs) || bundle.legs.length === 0 || bundle.meta.fixture !== false) {
-    throw new Error('Real data bundle missing: src/router/__realdata__ must hold the real bundle (meta.fixture false, legs present).');
+    throw new Error(
+      'Real data bundle missing: src/router/__realdata__ must hold the real bundle (meta.fixture false, legs present).',
+    );
   }
 });
 
@@ -32,7 +38,11 @@ describe('real data', () => {
       ['MATHIVERI', 515, 'RASDHOO', 655],
       ['RASDHOO', 660, 'MALE', 850],
     ]);
-    expect(j.transfers[0].assessment).toMatchObject({ status: 'safe', waitMin: [5, 5], long: false });
+    expect(j.transfers[0].assessment).toMatchObject({
+      status: 'safe',
+      waitMin: [5, 5],
+      long: false,
+    });
     // A second official 14:10 option changes at Ukulhas onto the same Malé boat.
     const uk = js.find((x) => !x.usesInferred && x.transfers[0]?.stop === 'UKULHAS');
     expect(uk && [uk.arr.max, uk.transfers[0].assessment.status]).toEqual([850, 'safe']);
@@ -44,14 +54,23 @@ describe('real data', () => {
       ['THODDOO', 390, 'RASDHOO', 460],
       ['RASDHOO', 660, 'MALE', 850],
     ]);
-    expect(off.transfers[0].assessment).toMatchObject({ status: 'safe', waitMin: [200, 200], long: true });
+    expect(off.transfers[0].assessment).toMatchObject({
+      status: 'safe',
+      waitMin: [200, 200],
+      long: true,
+    });
     // The data has no earlier boat on from Rasdhoo after the 07:40 arrival.
-    expect(findWaitAlternatives(bundle, q('THODDOO', '2026-10-25'), off, 0).alternatives).toEqual([]);
+    expect(findWaitAlternatives(bundle, q('THODDOO', '2026-10-25'), off, 0).alternatives).toEqual(
+      [],
+    );
     // Direct inferred Thoddoo to Malé, 08:02-08:09 to 09:12-09:40, is offered without officialOnly.
     const all = findJourneys(bundle, q('THODDOO', '2026-10-25'));
     const direct = all.find((x) => x.usesInferred && x.rides.length === 1 && x.dep.min === 482)!;
     expect(direct).toBeDefined();
-    expect([direct.dep, direct.arr]).toEqual([{ min: 482, max: 489 }, { min: 552, max: 580 }]);
+    expect([direct.dep, direct.arr]).toEqual([
+      { min: 482, max: 489 },
+      { min: 552, max: 580 },
+    ]);
     expect(direct.rides[0].occurrences[0].leg.evidence).toMatchObject({ devices: 8, days: 22 });
   });
 
@@ -68,7 +87,9 @@ describe('real data', () => {
     const js = findJourneys(bundle, q('RASDHOO', '2026-10-30'));
     const off = findJourneys(bundle, q('RASDHOO', '2026-10-30', { officialOnly: true }));
     for (const j of [...js, ...off]) {
-      expect(j.rides.some((r) => r.source === 'mtcc' && r.from === 'RASDHOO' && r.dep.min === 660)).toBe(false);
+      expect(
+        j.rides.some((r) => r.source === 'mtcc' && r.from === 'RASDHOO' && r.dep.min === 660),
+      ).toBe(false);
     }
   });
 });

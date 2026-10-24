@@ -98,7 +98,9 @@ export function findJourneys(
   after?: Occurrence,
 ): Journey[] {
   const { config } = bundle;
-  const usable = query.officialOnly ? occurrences.filter((o) => o.leg.source === 'mtcc') : occurrences;
+  const usable = query.officialOnly
+    ? occurrences.filter((o) => o.leg.source === 'mtcc')
+    : occurrences;
   const byFrom = byDepartureStop(usable, config);
 
   const found = new Map<string, Journey>();
