@@ -21,6 +21,9 @@ type Props = {
   query: Query | null;
   /** Called with null on Reset. */
   onScenarioChange: (s: Scenario | null) => void;
+  /** Id of the after-cancellation journey drawn on the map. */
+  shownRouteId: string | null;
+  onShowRoute: (journeyId: string) => void;
 };
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -41,7 +44,13 @@ function occIds(j: Journey): string[] {
   return j.rides.flatMap((r) => r.occurrences.map((o) => o.id));
 }
 
-export function DisruptionPanel({ bundle, query, onScenarioChange }: Props) {
+export function DisruptionPanel({
+  bundle,
+  query,
+  onScenarioChange,
+  shownRouteId,
+  onShowRoute,
+}: Props) {
   const headingId = useId();
   const selectId = useId();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -199,6 +208,32 @@ export function DisruptionPanel({ bundle, query, onScenarioChange }: Props) {
             {legLabel(scenario.cancelled)}{' '}
             <span className="pill pill-danger">Cancelled (simulated)</span>
           </p>
+
+          <div className="dp-block">
+            <h3 className="dp-sub">Alternative routes after the cancellation</h3>
+            {result.after.length === 0 ? (
+              <p className="dp-muted">No route found after the cancellation.</p>
+            ) : (
+              <ul className="dp-list">
+                {result.after.map((j) => {
+                  const shown = j.id === shownRouteId;
+                  return (
+                    <li key={j.id}>
+                      <button
+                        type="button"
+                        className={`dp-item dp-route${shown ? ' dp-route-shown' : ''}`}
+                        aria-pressed={shown}
+                        onClick={() => onShowRoute(j.id)}
+                      >
+                        {journeyLine(j)}
+                        <span className="dp-hint">{shown ? 'On the map' : 'Show on map'}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
 
           <div className="dp-block">
             <h3 className="dp-sub">Before and after</h3>
