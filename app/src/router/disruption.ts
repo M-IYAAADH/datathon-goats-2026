@@ -1,6 +1,6 @@
 // Disruption what-if, SRS 5.5. Every function returns new values; the baseline is never mutated.
 import { assessTransfer } from './connections';
-import type { Bundle, Connection, Occurrence, Query, ScenarioResult } from './model';
+import type { Bundle, Connection, Occurrence, Query, ScenarioResult, ShiftResult } from './model';
 import { findJourneys, isVisible, sameRide } from './planner';
 import { expandOccurrences } from './time';
 
@@ -51,4 +51,44 @@ export function compareReachability(bundle: Bundle, query: Query, cancelledOccur
     recovery: after.filter((j) => j.usesInferred),
     newBest: after[0] ?? null,
   };
+}
+
+// ---------- Shift proposals (SRS FR-17, FR-18) ----------
+
+export const MTCC_APPROVAL_NOTE = 'Recommendation for MTCC to approve. Nothing changes automatically.';
+
+/**
+ * Try moving the official occurrence feeding `target` earlier or later in
+ * config.shiftStepMin steps up to config.maxShiftMin, smallest move first, keeping
+ * travel time. A shift is proposed only if it makes `target` Safe and leaves no other
+ * modelled connection of that occurrence Missed. No proposals = "No safe shift".
+ */
+export function proposeShifts(bundle: Bundle, occurrences: readonly Occurrence[], target: Connection): ShiftResult {
+  const { config } = bundle;
+  const occ = target.arriving;
+  const result: ShiftResult = { proposals: [], rejected: [] };
+  if (occ.leg.source !== 'mtcc') return result;
+
+  // shortcut: shifts this segment only, not the rest of a multi-leg trip; shift the whole tripId if real data has such feeders.
+  const others = modelledConnections(bundle, occurrences).filter(
+    (c) => (c.arriving.id === occ.id || c.departing.id === occ.id) && !(c.arriving.id === occ.id && c.departing.id === target.departing.id),
+  );
+  for (let k = config.shiftStepMin; k <= config.maxShiftMin; k += config.shiftStepMin) {
+    for (const shiftMin of [-k, k]) {
+      const moved: Occurrence = {
+        ...occ,
+        dep: { min: occ.dep.min + shiftMin, max: occ.dep.max + shiftMin },
+        arr: { min: occ.arr.min + shiftMin, max: occ.arr.max + shiftMin },
+      };
+      if (assessTransfer(moved, target.departing, config).status !== 'safe') continue;
+      const breaks = others.filter(
+        (c) =>
+          assessTransfer(c.arriving.id === occ.id ? moved : c.arriving, c.departing.id === occ.id ? moved : c.departing, config)
+            .status === 'missed',
+      );
+      if (breaks.length) result.rejected.push({ shiftMin, breaks });
+      else result.proposals.push({ occurrenceId: occ.id, shiftMin, newDep: moved.dep, newArr: moved.arr, fixes: target, note: MTCC_APPROVAL_NOTE });
+    }
+  }
+  return result;
 }
