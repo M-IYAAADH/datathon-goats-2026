@@ -69,7 +69,7 @@ If you finish your lane, take any open task. Ask in the group chat before taking
 | [x] Member B 15:57 | UR-A | Shell: header with theme toggle, banners, mobile Plan/Map tabs | App.tsx/.css, Header, Banner, MobileTabs, hooks/useTheme.ts |
 | [x] Member B 15:57 | UR-B | Planner form restyle and JourneyList | PlannerForm, JourneyList |
 | [x] Member B 15:57 | UR-C | Map theming, legend, keyboard-reachable stops | MapView, Legend |
-| [~] Member B 15:54 | UR-D | ESLint/Prettier tooling and How this works panel (FR-25) | package.json, eslint.config.js, .prettierrc, HowItWorks |
+| [x] Member B 16:07 | UR-D | ESLint/Prettier tooling and How this works panel (FR-25) | package.json, eslint.config.js, .prettierrc, HowItWorks |
 
 ## 3. Data and docs lane (Lead)
 
