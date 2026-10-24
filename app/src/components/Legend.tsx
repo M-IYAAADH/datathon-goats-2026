@@ -1,43 +1,57 @@
+import { useEffect, useState } from 'react';
 import './Legend.css';
-// Kept in sync with the CSS variables in styles.css; MapLibre paint can't read CSS vars.
-export const MAP_COLORS = {
-  background: '#dbeaf5',
-  official: '#2563eb',
-  inferred: '#0d9488',
-  highlight: '#f59e0b',
-  cancelled: '#dc2626',
-  stop: '#111827',
-  hub: '#0f5ea8',
-} as const;
 
-type LegendItem = { label: string; color: string; width: number; dash?: string };
+type LegendItem = { label: string; token: string; width: number; dash?: string };
 
 const ITEMS: LegendItem[] = [
-  { label: 'Official ferry (solid)', color: MAP_COLORS.official, width: 2.5 },
-  { label: 'Inferred service (dashed)', color: MAP_COLORS.inferred, width: 2.5, dash: '6 4' },
-  { label: 'Selected journey', color: MAP_COLORS.highlight, width: 5 },
-  { label: 'Cancelled (simulated)', color: MAP_COLORS.cancelled, width: 4, dash: '3 3' },
+  { label: 'Official ferry (solid)', token: '--map-official', width: 2.5 },
+  { label: 'Inferred service (dashed)', token: '--map-inferred', width: 2.5, dash: '6 4' },
+  { label: 'Selected journey', token: '--map-highlight', width: 5 },
+  { label: 'Cancelled (simulated)', token: '--map-cancelled', width: 4, dash: '3 3' },
 ];
 
+const DESKTOP = '(min-width: 768px)';
+
+function isDesktop(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia(DESKTOP).matches;
+}
+
 export function Legend() {
+  const [open, setOpen] = useState(isDesktop);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const media = window.matchMedia(DESKTOP);
+    const onChange = () => setOpen(media.matches);
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
+  }, []);
+
   return (
-    <ul className="map-legend" aria-label="Map legend">
-      {ITEMS.map((item) => (
-        <li key={item.label}>
-          <svg width="28" height="10" aria-hidden="true" focusable="false">
-            <line
-              x1="1"
-              y1="5"
-              x2="27"
-              y2="5"
-              stroke={item.color}
-              strokeWidth={item.width}
-              strokeDasharray={item.dash}
-            />
-          </svg>
-          <span>{item.label}</span>
-        </li>
-      ))}
-    </ul>
+    <details
+      className="map-legend card"
+      open={open}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
+      <summary>Legend</summary>
+      <ul aria-label="Map legend">
+        {ITEMS.map((item) => (
+          <li key={item.label}>
+            <svg width="28" height="10" aria-hidden="true" focusable="false">
+              <line
+                x1="1"
+                y1="5"
+                x2="27"
+                y2="5"
+                style={{ stroke: `var(${item.token})` }}
+                strokeWidth={item.width}
+                strokeDasharray={item.dash}
+              />
+            </svg>
+            <span>{item.label}</span>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }

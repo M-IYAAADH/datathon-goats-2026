@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
   GPUInitializationError,
   LngLatBounds,
@@ -8,7 +8,8 @@ import {
   type MapOptions,
 } from 'maplibre-gl';
 import type { Leg, Stop } from '../data/load';
-import { Legend, MAP_COLORS } from './Legend';
+import { readMapColors, useMapColors, type MapColors } from '../hooks/useMapColors';
+import { Legend } from './Legend';
 import './MapView.css';
 
 export type MapConfig = { minDevices: number; minDays: number };
@@ -130,61 +131,76 @@ function stopCollection(stops: Stop[]): FeatureCollection {
 const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
 
 // Plain background only: no tiles, no glyphs, no sprites, so nothing is fetched.
-const STYLE: Exclude<MapOptions['style'], string | undefined> = {
+function buildStyle(c: MapColors): Exclude<MapOptions['style'], string | undefined> {
+  return {
   version: 8,
-  sources: {
-    lines: { type: 'geojson', data: EMPTY },
-    highlight: { type: 'geojson', data: EMPTY },
-    cancelled: { type: 'geojson', data: EMPTY },
-    stops: { type: 'geojson', data: EMPTY },
-  },
-  layers: [
-    { id: 'bg', type: 'background', paint: { 'background-color': MAP_COLORS.background } },
-    {
-      id: 'lines-official',
-      type: 'line',
-      source: 'lines',
-      filter: ['==', ['get', 'official'], true],
-      paint: { 'line-color': MAP_COLORS.official, 'line-width': 2.5 },
+    sources: {
+      lines: { type: 'geojson', data: EMPTY },
+      highlight: { type: 'geojson', data: EMPTY },
+      cancelled: { type: 'geojson', data: EMPTY },
+      stops: { type: 'geojson', data: EMPTY },
     },
-    {
-      id: 'lines-inferred',
-      type: 'line',
-      source: 'lines',
-      filter: ['==', ['get', 'official'], false],
-      paint: {
-        'line-color': MAP_COLORS.inferred,
-        'line-width': 2.5,
-        'line-dasharray': [3, 2],
-        'line-offset': 4,
+    layers: [
+      { id: 'bg', type: 'background', paint: { 'background-color': c.background } },
+      {
+        id: 'lines-official',
+        type: 'line',
+        source: 'lines',
+        filter: ['==', ['get', 'official'], true],
+        paint: { 'line-color': c.official, 'line-width': 2.5 },
       },
-    },
-    {
-      id: 'lines-highlight',
-      type: 'line',
-      source: 'highlight',
-      layout: { 'line-cap': 'round' },
-      paint: { 'line-color': MAP_COLORS.highlight, 'line-width': 6 },
-    },
-    {
-      id: 'lines-cancelled',
-      type: 'line',
-      source: 'cancelled',
-      paint: { 'line-color': MAP_COLORS.cancelled, 'line-width': 4, 'line-dasharray': [1.5, 1] },
-    },
-    {
-      id: 'stops',
-      type: 'circle',
-      source: 'stops',
-      paint: {
-        'circle-radius': ['case', ['get', 'hub'], 7, 5],
-        'circle-color': ['case', ['get', 'hub'], MAP_COLORS.hub, MAP_COLORS.stop],
-        'circle-stroke-color': '#ffffff',
-        'circle-stroke-width': 1.5,
+      {
+        id: 'lines-inferred',
+        type: 'line',
+        source: 'lines',
+        filter: ['==', ['get', 'official'], false],
+        paint: {
+          'line-color': c.inferred,
+          'line-width': 2.5,
+          'line-dasharray': [3, 2],
+          'line-offset': 4,
+        },
       },
-    },
-  ],
-};
+      {
+        id: 'lines-highlight',
+        type: 'line',
+        source: 'highlight',
+        layout: { 'line-cap': 'round' },
+        paint: { 'line-color': c.highlight, 'line-width': 6 },
+      },
+      {
+        id: 'lines-cancelled',
+        type: 'line',
+        source: 'cancelled',
+        paint: { 'line-color': c.cancelled, 'line-width': 4, 'line-dasharray': [1.5, 1] },
+      },
+      {
+        id: 'stops',
+        type: 'circle',
+        source: 'stops',
+        paint: {
+          'circle-radius': ['case', ['get', 'hub'], 7, 5],
+          'circle-color': ['case', ['get', 'hub'], c.hub, c.stop],
+          'circle-stroke-color': c.halo,
+          'circle-stroke-width': 1.5,
+        },
+      },
+    ],
+    };
+}
+
+function applyColors(map: MlMap, c: MapColors) {
+  const has = (layer: string) => !!map.getLayer(layer);
+  if (has('bg')) map.setPaintProperty('bg', 'background-color', c.background);
+  if (has('lines-official')) map.setPaintProperty('lines-official', 'line-color', c.official);
+  if (has('lines-inferred')) map.setPaintProperty('lines-inferred', 'line-color', c.inferred);
+  if (has('lines-highlight')) map.setPaintProperty('lines-highlight', 'line-color', c.highlight);
+  if (has('lines-cancelled')) map.setPaintProperty('lines-cancelled', 'line-color', c.cancelled);
+  if (has('stops')) {
+    map.setPaintProperty('stops', 'circle-color', ['case', ['get', 'hub'], c.hub, c.stop]);
+    map.setPaintProperty('stops', 'circle-stroke-color', c.halo);
+  }
+}
 
 function fitToStops(map: MlMap, stops: Stop[]) {
   if (stops.length === 0) return;
@@ -207,6 +223,9 @@ export function MapView({
   const loadedRef = useRef(false);
   const clickRef = useRef(onStopClick);
   clickRef.current = onStopClick;
+  const colors = useMapColors();
+  const colorsRef = useRef(colors);
+  colorsRef.current = colors;
 
   const segments = useMemo(
     () => buildSegments(stops, legs, highlightLegIds, cancelledLegIds, config),
@@ -221,7 +240,7 @@ export function MapView({
     try {
       map = new MlMap({
         container: containerRef.current,
-        style: STYLE,
+        style: buildStyle(readMapColors()),
         attributionControl: false,
         center: [73.2, 4.2],
         zoom: 7,
@@ -236,6 +255,7 @@ export function MapView({
     });
     map.on('load', () => {
       loadedRef.current = true;
+      applyColors(map, colorsRef.current);
       applyData(map, dataRef.current.stops, dataRef.current.segments);
       fitToStops(map, dataRef.current.stops);
     });
@@ -249,12 +269,21 @@ export function MapView({
     map.on('mouseleave', 'stops', () => {
       map.getCanvas().style.cursor = '';
     });
+    const resizer =
+      typeof ResizeObserver === 'function' ? new ResizeObserver(() => map.resize()) : null;
+    resizer?.observe(containerRef.current);
     return () => {
+      resizer?.disconnect();
       loadedRef.current = false;
       mapRef.current = null;
       map.remove();
     };
   }, [fallback]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map && loadedRef.current) applyColors(map, colors);
+  }, [colors]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -286,7 +315,20 @@ export function MapView({
       {fallback ? (
         <SvgMap stops={stops} segments={segments} onStopClick={onStopClick} />
       ) : (
-        <div ref={containerRef} className="map-canvas" role="region" aria-label={MAP_LABEL} />
+        <>
+          <div ref={containerRef} className="map-canvas" role="region" aria-label={MAP_LABEL} />
+          {onStopClick && (
+            <ul className="visually-hidden" aria-label="Select a stop">
+              {stops.map((s) => (
+                <li key={s.id}>
+                  <button type="button" onClick={() => onStopClick(s.id)}>
+                    {s.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
       <Legend />
     </div>
@@ -339,12 +381,12 @@ export function SvgMap({ stops, segments, onStopClick }: SvgMapProps) {
     return (
       <svg className="map-svg" viewBox="0 0 1000 400" role="img" aria-labelledby="map-svg-title">
         <title id="map-svg-title">{`${MAP_LABEL} (no stops loaded)`}</title>
-        <rect width="1000" height="400" fill={MAP_COLORS.background} />
+        <rect width="1000" height="400" className="map-svg-bg" />
       </svg>
     );
   }
 
-  const line = (s: Segment, stroke: string, width: number, dash?: string, offset = 0) => {
+  const line = (s: Segment, token: string, width: number, dash?: string, offset = 0) => {
     const x1 = proj.x(s.a.lon);
     const y1 = proj.y(s.a.lat);
     const x2 = proj.x(s.b.lon);
@@ -359,7 +401,7 @@ export function SvgMap({ stops, segments, onStopClick }: SvgMapProps) {
         y1={y1 + oy}
         x2={x2 + ox}
         y2={y2 + oy}
-        stroke={stroke}
+        style={{ stroke: `var(${token})` }}
         strokeWidth={width}
         strokeDasharray={dash}
         strokeLinecap="round"
@@ -376,27 +418,42 @@ export function SvgMap({ stops, segments, onStopClick }: SvgMapProps) {
       aria-labelledby="map-svg-title"
     >
       <title id="map-svg-title">{`${MAP_LABEL} (simplified view, WebGL unavailable)`}</title>
-      <rect width={proj.w} height={proj.h} fill={MAP_COLORS.background} />
+      <rect width={proj.w} height={proj.h} className="map-svg-bg" />
       <g>
         {segments.base.map((s) =>
-          s.official ? line(s, MAP_COLORS.official, 3) : line(s, MAP_COLORS.inferred, 3, '10 7', 6),
+          s.official ? line(s, '--map-official', 3) : line(s, '--map-inferred', 3, '10 7', 6),
         )}
       </g>
-      <g>{segments.highlight.map((s) => line(s, MAP_COLORS.highlight, 8))}</g>
-      <g>{segments.cancelled.map((s) => line(s, MAP_COLORS.cancelled, 5, '6 5'))}</g>
+      <g>{segments.highlight.map((s) => line(s, '--map-highlight', 8))}</g>
+      <g>{segments.cancelled.map((s) => line(s, '--map-cancelled', 5, '6 5'))}</g>
       <g>
         {stops.map((s) => (
           <g
             key={s.id}
             className={onStopClick ? 'map-svg-stop clickable' : 'map-svg-stop'}
             onClick={onStopClick ? () => onStopClick(s.id) : undefined}
+            {...(onStopClick
+              ? {
+                  role: 'button',
+                  tabIndex: 0,
+                  'aria-label': s.name,
+                  onKeyDown: (e: KeyboardEvent<SVGGElement>) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onStopClick(s.id);
+                    }
+                  },
+                }
+              : {})}
           >
             <circle
               cx={proj.x(s.lon)}
               cy={proj.y(s.lat)}
               r={s.kind === 'hub' ? 9 : 7}
-              fill={s.kind === 'hub' ? MAP_COLORS.hub : MAP_COLORS.stop}
-              stroke="#ffffff"
+              style={{
+                fill: s.kind === 'hub' ? 'var(--map-hub)' : 'var(--map-stop)',
+                stroke: 'var(--map-halo)',
+              }}
               strokeWidth={2}
             />
             <text x={proj.x(s.lon) + 13} y={proj.y(s.lat) + 6} className="map-svg-label">
