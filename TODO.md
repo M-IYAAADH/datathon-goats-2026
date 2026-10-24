@@ -52,7 +52,7 @@ If you finish your lane, take any open task. Ask in the group chat before taking
 
 | Status | ID | Task | Files | Needs | Done when |
 |---|---|---|---|---|---|
-| [~] Member B 15:42 | U1 | Data loader: `loadBundle()` fetches the five files; `validateBundle()` checks required fields, stop references, `arr` after `dep`, one `buildVersion` across files. Clear error message naming file and field | `src/data/load.ts` | R1, X1 | Breaking a field in a JSON shows the message, not a blank page |
+| [x] Member B 15:45 | U1 | Data loader: `loadBundle()` fetches the five files; `validateBundle()` checks required fields, stop references, `arr` after `dep`, one `buildVersion` across files. Clear error message naming file and field | `src/data/load.ts` | R1, X1 | Breaking a field in a JSON shows the message, not a blank page |
 | [x] Member B 15:36 | U2 | Layout and banners: header, left panel (form/results), right panel (map). Persistent honesty banner (SRS FR-23). "SAMPLE DATA" banner when `meta.fixture` is true | `src/App.tsx`, `src/components/Banner.tsx`, `src/styles.css` | X0, U1 | Both banners visible; layout holds at 390 px wide |
 | [ ] | U3 | Planner form: origin, destination, date (default Sun 25 Oct 2026), earliest departure; "Plan" button calls `findJourneys` | `src/components/PlannerForm.tsx` | U2, R4 | Entering Mathiveri to Malé lists journeys |
 | [ ] | U4 | Journey timeline: legs as rows with times (exact or range), wait bars between legs, labels Safe / Possible / Long wait (text and colour), official vs inferred, evidence text ("6 devices, 11 days"). Alternatives block under a long wait | `src/components/JourneyTimeline.tsx` | U3, R5 | Thoddoo to Malé shows the long wait and an alternative |
@@ -99,3 +99,4 @@ If you finish your lane, take any open task. Ask in the group chat before taking
   - T12: after cancelling Rasdhoo to Malé 11:00, the Mathiveri 10:55 arrival is already Safe onto the 11:10 inferred boat (10:55 + 15). With sample data, no shift is proposed. Demo step 4 needs a later or tighter inferred departure to show a shift.
   - Route 308 (Thoddoo) and the 309 weekdays are made up. Kaafu census keys use a `K-` prefix.
 - U5: map shows a dashed, offset inferred line next to the official line on a pair both serve (Rasdhoo to Malé). Not yet checked visually in a browser or with WebGL off. Stop clicks work with a mouse only (keyboard comes in U7).
+- U1: the contract types live in `app/src/data/load.ts` until R1 lands. Member A: when you write `router/model.ts`, match these shapes (or tell Member B), and load.ts will re-export from model.ts.

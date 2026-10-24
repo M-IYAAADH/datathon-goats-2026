@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Banner } from './components/Banner';
-import { MapView, type Leg, type MapConfig, type Stop } from './components/MapView';
+import { MapView } from './components/MapView';
+import { loadBundle, type Bundle, type Leg, type Stop } from './data/load';
 
-// TODO(U1): replace with loadBundle() from src/data/load.ts
-type MetaLite = { fixture: boolean };
-
-type MetaState =
+type LoadState =
   | { status: 'loading' }
-  | { status: 'ready'; meta: MetaLite }
+  | { status: 'ready'; bundle: Bundle }
   | { status: 'error'; message: string };
 
 const HONESTY_TEXT =
@@ -15,85 +13,26 @@ const HONESTY_TEXT =
   'Transfer buffers (5 and 15 minutes) are assumptions. ' +
   'Time zone and speed unit of the source data are unconfirmed.';
 
-async function fetchMeta(): Promise<MetaLite> {
-  const url = `${import.meta.env.BASE_URL}data/meta.json`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`meta.json: HTTP ${res.status}`);
-  let body: unknown;
-  try {
-    body = await res.json();
-  } catch {
-    throw new Error('meta.json: not valid JSON (the file may be missing)');
-  }
-  if (typeof body !== 'object' || body === null || typeof (body as MetaLite).fixture !== 'boolean') {
-    throw new Error('meta.json: field "fixture" is missing or not a boolean');
-  }
-  return { fixture: (body as MetaLite).fixture };
-}
-
-type MapData = { stops: Stop[]; legs: Leg[]; config: MapConfig };
-
-type MapDataState =
-  | { status: 'loading' }
-  | { status: 'ready'; data: MapData }
-  | { status: 'error'; message: string };
-
-async function fetchJson(file: string): Promise<unknown> {
-  const res = await fetch(`${import.meta.env.BASE_URL}data/${file}`);
-  if (!res.ok) throw new Error(`${file}: HTTP ${res.status}`);
-  try {
-    return await res.json();
-  } catch {
-    throw new Error(`${file}: not valid JSON (the file may be missing)`);
-  }
-}
-
-// TODO(U1): replace with loadBundle() from src/data/load.ts
-async function fetchMapData(): Promise<MapData> {
-  const [stops, legs, config] = await Promise.all([
-    fetchJson('stops.json'),
-    fetchJson('legs.json'),
-    fetchJson('config.json'),
-  ]);
-  if (!Array.isArray(stops)) throw new Error('stops.json: expected an array of stops');
-  if (!Array.isArray(legs)) throw new Error('legs.json: expected an array of legs');
-  const c = config as Partial<MapConfig> | null;
-  if (typeof c?.minDevices !== 'number' || typeof c.minDays !== 'number') {
-    throw new Error('config.json: field "minDevices" or "minDays" is missing or not a number');
-  }
-  return {
-    stops: stops as Stop[],
-    legs: legs as Leg[],
-    config: { minDevices: c.minDevices, minDays: c.minDays },
-  };
-}
-
 const NO_STOPS: Stop[] = [];
 const NO_LEGS: Leg[] = [];
 
 export function App() {
-  const [meta, setMeta] = useState<MetaState>({ status: 'loading' });
-  const [mapData, setMapData] = useState<MapDataState>({ status: 'loading' });
+  const [state, setState] = useState<LoadState>({ status: 'loading' });
 
   useEffect(() => {
     let active = true;
-    fetchMeta().then(
-      (m) => active && setMeta({ status: 'ready', meta: m }),
-      (e: unknown) =>
-        active && setMeta({ status: 'error', message: e instanceof Error ? e.message : String(e) }),
-    );
-    fetchMapData().then(
-      (d) => active && setMapData({ status: 'ready', data: d }),
+    loadBundle().then(
+      (bundle) => active && setState({ status: 'ready', bundle }),
       (e: unknown) =>
         active &&
-        setMapData({ status: 'error', message: e instanceof Error ? e.message : String(e) }),
+        setState({ status: 'error', message: e instanceof Error ? e.message : String(e) }),
     );
     return () => {
       active = false;
     };
   }, []);
 
-  const ready = mapData.status === 'ready' ? mapData.data : null;
+  const ready = state.status === 'ready' ? state.bundle : null;
 
   return (
     <div className="app">
@@ -102,7 +41,7 @@ export function App() {
       </header>
 
       <div className="banners">
-        {meta.status === 'ready' && meta.meta.fixture && (
+        {ready?.meta.fixture && (
           <Banner kind="warning" label="SAMPLE DATA">
             This app is running on sample data, not the real data bundle.
           </Banner>
@@ -110,17 +49,12 @@ export function App() {
         <Banner kind="info" label="About this data">
           {HONESTY_TEXT}
         </Banner>
-        {(meta.status === 'loading' || mapData.status === 'loading') && (
+        {state.status === 'loading' && (
           <p className="load-status" role="status">Loading data…</p>
         )}
-        {meta.status === 'error' && (
+        {state.status === 'error' && (
           <p className="load-error" role="alert">
-            Could not load data. {meta.message}
-          </p>
-        )}
-        {mapData.status === 'error' && (
-          <p className="load-error" role="alert">
-            Could not load data. {mapData.message}
+            Could not load data. {state.message}
           </p>
         )}
       </div>

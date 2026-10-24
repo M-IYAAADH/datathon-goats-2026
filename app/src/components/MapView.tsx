@@ -7,44 +7,8 @@ import {
   type GeoJSONSource,
   type MapOptions,
 } from 'maplibre-gl';
+import type { Leg, Stop } from '../data/load';
 import { Legend, MAP_COLORS } from './Legend';
-
-// TODO(R1): import Stop/Leg from router/model.ts
-export type Stop = {
-  id: string;
-  name: string;
-  atoll: string;
-  lat: number;
-  lon: number;
-  censusKey: string | null;
-  kind: 'island' | 'hub';
-};
-
-export type TimeRange = { min: number; max: number };
-
-export type Evidence = {
-  devices: number;
-  days: number;
-  weekdayObs: number[];
-  period: string;
-  unconfirmedOriginShare: number;
-};
-
-export type Leg = {
-  id: string;
-  source: 'mtcc' | 'inferred';
-  routeId: string;
-  tripId: string;
-  from: string;
-  to: string;
-  dep: TimeRange;
-  arr: TimeRange;
-  days: number[];
-  validFrom: string;
-  validTo: string;
-  cls: 'fast' | 'slow' | null;
-  evidence: Evidence | null;
-};
 
 export type MapConfig = { minDevices: number; minDays: number };
 
