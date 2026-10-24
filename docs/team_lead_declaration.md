@@ -1,7 +1,7 @@
 # Team lead declaration
 
 Project: Maldives Island Journey Planner (Datathon 2026)
-Repository: https://github.com/NewGate110/Bavathi-goats
+Repository: https://github.com/M-IYAAADH/datathon-goats-2026
 Data repository: https://github.com/M-IYAAADH/datathon-2026
 
 ## Data sources

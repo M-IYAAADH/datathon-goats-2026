@@ -105,6 +105,10 @@ export function App() {
                 This app is running on sample data, not the real data bundle.
               </Banner>
             )}
+            {/* FR-23: the honesty banner stays visible on every tab. */}
+            <Banner kind="info" label="About this data">
+              {HONESTY_TEXT}
+            </Banner>
             {state.status === 'loading' && (
               <p className="load-status" role="status">
                 Loading data…
@@ -166,9 +170,6 @@ export function App() {
               aria-labelledby="tab-about"
               hidden={tab !== 'about'}
             >
-              <Banner kind="info" label="About this data">
-                {HONESTY_TEXT}
-              </Banner>
               {ready && <HowItWorks config={ready.config} />}
             </div>
           </div>

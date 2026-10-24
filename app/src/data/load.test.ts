@@ -99,6 +99,12 @@ describe('validateBundle', () => {
     expectError(raw, 'legs.json', `[${i}].evidence`);
   });
 
+  it('rejects a zero shift step, which would hang the shift search', () => {
+    const raw = sample();
+    raw.config.shiftStepMin = 0;
+    expectError(raw, 'config.json', 'shiftStepMin');
+  });
+
   it('rejects a mismatched buildVersion', () => {
     const raw = sample();
     raw.config.buildVersion = 'other';

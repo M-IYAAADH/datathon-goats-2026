@@ -92,8 +92,10 @@ def overpass(query, path):
                                  headers={'User-Agent': UA, 'Accept': 'application/json'})
     with urllib.request.urlopen(req, timeout=300) as r:
         data = json.loads(r.read().decode('utf-8'))
-    with open(path, 'w', encoding='utf-8') as f:
+    tmp = path + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
         json.dump(data, f)
+    os.replace(tmp, path)  # a killed run never leaves a half-written cache file
     return data
 
 
@@ -304,7 +306,7 @@ def route_pair(G, land, a, b, stops):
     # simplify OSM runs, tag each point with the source of the edge that leaves it
     res, run = [], [out[0]]
     for pt in out[1:]:
-        if pt[1] == run[-1][1] or len(run) == 0:
+        if pt[1] == run[-1][1]:
             run.append(pt)
         else:
             run.append(pt)
@@ -319,6 +321,7 @@ def route_pair(G, land, a, b, stops):
             coords = douglas_peucker(coords, 0.0003)
         for c in coords:
             if final and final[-1][0] == c:
+                final[-1] = (c, src)  # shared point: tag it with the stretch that leaves it
                 continue
             final.append((c, src))
     final[-1] = (pb, final[-1][1])

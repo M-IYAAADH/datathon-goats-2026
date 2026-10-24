@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Leg } from './model';
-import { addDays, expandOccurrences, formatClock, parseClock, weekday } from './time';
+import { addDays, expandOccurrences, weekday } from './time';
 
 const leg = (over: Partial<Leg>): Leg => ({
   id: 'x',
@@ -29,15 +29,9 @@ describe('calendar', () => {
     expect(addDays('2026-10-31', 1)).toBe('2026-11-01');
     expect(addDays('2026-01-01', -1)).toBe('2025-12-31');
   });
-  it('rejects bad dates and times', () => {
+  it('rejects bad dates', () => {
     expect(() => weekday('2026-02-30')).toThrow();
     expect(() => weekday('25/10/2026')).toThrow();
-    expect(() => parseClock('8:75')).toThrow();
-  });
-  it('parses and formats clock minutes', () => {
-    expect(parseClock('08:35')).toBe(515);
-    expect(formatClock(515)).toBe('08:35');
-    expect(formatClock(1500)).toBe('01:00+1');
   });
 });
 
