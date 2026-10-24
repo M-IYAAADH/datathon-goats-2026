@@ -32,6 +32,8 @@ Demo story (Sunday 25 Oct 2026): Mathiveri to Malé. MTCC Mathiveri to Rasdhoo l
 - Hosting: static build (Vercel or Netlify) plus a local `npm run build && npm run preview` backup.
 
 ```
+prototype/index.html      earlier single-file Leaflet prototype (reference only, not built)
+tools/                    data-build scripts (Lead), e.g. build_shapes.py
 app/
   public/data/            five JSON files (sample now, real later)
   src/

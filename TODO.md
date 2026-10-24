@@ -31,7 +31,7 @@ If you finish your lane, take any open task. Ask in the group chat before taking
 
 | Status | ID | Task | Files | Done when |
 |---|---|---|---|---|
-| [ ] | X0 | Scaffold Vite + React + TypeScript app, add `maplibre-gl` and `vitest`, scripts `dev`, `build`, `test`, `preview` | `app/package.json`, `app/tsconfig.json`, `app/vite.config.ts`, `app/index.html`, `app/src/main.tsx` | `npm install && npm run dev` shows a blank page, `npm test` runs |
+| [x] 14:45 | X0 | Scaffold Vite + React + TypeScript app, add `maplibre-gl` and `vitest`, scripts `dev`, `build`, `test`, `preview` | `app/package.json`, `app/tsconfig.json`, `app/vite.config.ts`, `app/index.html`, `app/src/main.tsx` | `npm install && npm run dev` shows a blank page, `npm test` runs |
 | [ ] | R1 | Types: write `app/src/router/model.ts` from SRS section 4 (`Stop`, `Leg`, `Config`, `Census`, `Meta`, `Bundle`, `Occurrence`, `Journey`, `TransferAssessment`, `ScenarioResult`) | `app/src/router/model.ts` | Compiles. Post "model.ts is in" in the group chat. UI starts using it |
 | [ ] | X1 | Sample data: five JSON files in the exact contract shape with `meta.fixture: true`. Include the demo islands (Mathiveri, Bodufolhudhoo, Ukulhas, Rasdhoo, Thoddoo, Maafushi, Gulhi, Malé), the official legs from SRS T7, T8, T9, and two clearly fake inferred legs (Rasdhoo to Malé 11:10 to 11:30 and 12:20 to 12:50, `cls: "fast"`) | `app/public/data/*.json` | Files validate against `model.ts`. T7, T8, T9 scenarios are possible with them |
 
@@ -91,4 +91,5 @@ If you finish your lane, take any open task. Ask in the group chat before taking
 
 ## Blocked or notes (add lines here)
 
--
+- All npm commands run inside `app/` (`cd app`). The old single-file Leaflet prototype now lives in `prototype/index.html` for reference only; do not build on it. `tools/` holds the lead's data-build scripts.
+- Vitest runs `src/**/*.test.ts` in Node (no DOM) and passes when there are no test files yet.
