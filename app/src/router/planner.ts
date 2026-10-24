@@ -12,7 +12,7 @@ export function isVisible(leg: Leg, config: Config): boolean {
   return leg.source === 'mtcc' || (!!leg.evidence && leg.evidence.devices >= config.minDevices && leg.evidence.days >= config.minDays);
 }
 
-const sameRide = (a: Occurrence, b: Occurrence) => a.leg.tripId === b.leg.tripId && a.serviceDate === b.serviceDate;
+export const sameRide = (a: Occurrence, b: Occurrence) => a.leg.tripId === b.leg.tripId && a.serviceDate === b.serviceDate;
 
 /** Group a chain of occurrences into rides and assess each change of boat. */
 export function buildJourney(occs: Occurrence[], config: Config): Journey {
