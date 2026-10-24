@@ -202,10 +202,27 @@ export function DisruptionPanel({ bundle, query, onScenarioChange }: Props) {
 
           <div className="dp-block">
             <h3 className="dp-sub">Before and after</h3>
-            <p>
-              Baseline: <strong>{result.before.length}</strong> journeys. After:{' '}
-              <strong>{result.after.length}</strong> journeys.
-            </p>
+            <div className="cards">
+              <div className="card">
+                <div className="k">Baseline</div>
+                <div className="v">{result.before.length}</div>
+                <div className="s">journeys</div>
+              </div>
+              <div className="card">
+                <div className="k">After</div>
+                <div className="v">{result.after.length}</div>
+                <div className="s">journeys</div>
+              </div>
+              <div className="card">
+                <div className="k">Journeys that disappear</div>
+                <div className="v">{result.lostJourneys.length}</div>
+              </div>
+              <div className="card">
+                <div className="k">Connections that break</div>
+                <div className="v">{result.brokenConnections.length}</div>
+                <div className="s">modelled, not passengers</div>
+              </div>
+            </div>
             <h4 className="dp-sub2">Journeys that disappear</h4>
             {result.lostJourneys.length === 0 ? (
               <p className="dp-muted">None.</p>
