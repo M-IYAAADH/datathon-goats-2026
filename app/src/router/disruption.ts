@@ -63,12 +63,14 @@ export const MTCC_APPROVAL_NOTE = 'Recommendation for MTCC to approve. Nothing c
  * config.shiftStepMin steps up to config.maxShiftMin, smallest move first, keeping
  * travel time. A shift is proposed only if it makes `target` Safe and leaves no other
  * modelled connection of that occurrence Missed. No proposals = "No safe shift".
+ * A target that is already Safe needs no shift, so it gets an empty result.
  */
 export function proposeShifts(bundle: Bundle, occurrences: readonly Occurrence[], target: Connection): ShiftResult {
   const { config } = bundle;
   const occ = target.arriving;
   const result: ShiftResult = { proposals: [], rejected: [] };
   if (occ.leg.source !== 'mtcc') return result;
+  if (assessTransfer(occ, target.departing, config).status === 'safe') return result;
 
   // shortcut: shifts this segment only, not the rest of a multi-leg trip; shift the whole tripId if real data has such feeders.
   const others = modelledConnections(bundle, occurrences).filter(

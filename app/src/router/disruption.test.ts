@@ -46,6 +46,15 @@ describe('proposeShifts', () => {
     return { occs, target };
   };
 
+  it('T12 an already-Safe transfer gets no proposal', () => {
+    const occs = expandOccurrences(fixture.legs, '2026-10-25', 48);
+    const target = modelledConnections(fixture, occs).find(
+      (c) => c.arriving.id === 'mtcc-301-1@2026-10-25' && c.departing.id === CANCEL,
+    )!;
+    expect(target.assessment.status).toBe('safe');
+    expect(proposeShifts(fixture, occs, target)).toEqual({ proposals: [], rejected: [] });
+  });
+
   it('T12 proposes the smallest 5-minute step that makes the transfer Safe, with the MTCC approval text', () => {
     const bundle = tight();
     const { occs, target } = setup(bundle);
