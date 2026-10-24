@@ -75,6 +75,7 @@ export const MTCC_APPROVAL_NOTE =
  * steps up to config.maxShiftMin, smallest move first, keeping travel time. A shift is
  * proposed only if it makes `target` Safe and leaves no other modelled connection of
  * that trip Missed. newDep/newArr are the target segment's new times. No proposals = "No safe shift".
+ * A target that is already Safe needs no shift, so it gets an empty result.
  */
 export function proposeShifts(
   bundle: Bundle,
@@ -85,6 +86,7 @@ export function proposeShifts(
   const occ = target.arriving;
   const result: ShiftResult = { proposals: [], rejected: [] };
   if (occ.leg.source !== 'mtcc') return result;
+  if (assessTransfer(occ, target.departing, config).status === 'safe') return result;
 
   const trip = new Set(occurrences.filter((o) => sameRide(o, occ)).map((o) => o.id)).add(occ.id);
   const others = modelledConnections(bundle, occurrences).filter(

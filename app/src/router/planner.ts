@@ -86,6 +86,7 @@ export function buildJourney(occs: Occurrence[], config: Config): Journey {
 /**
  * Up to 3 journeys from query.origin to query.destination, earliest arrival
  * (arr.max) first, at most config.maxTransfers changes of boat, no Missed transfer.
+ * query.officialOnly drops every inferred leg.
  * `occurrences` lets callers (disruption what-ifs) pass a modified set.
  * `after`: an arriving occurrence the search continues from; its first change of boat
  * is checked and counted like any other transfer.
@@ -97,7 +98,8 @@ export function findJourneys(
   after?: Occurrence,
 ): Journey[] {
   const { config } = bundle;
-  const byFrom = byDepartureStop(occurrences, config);
+  const usable = query.officialOnly ? occurrences.filter((o) => o.leg.source === 'mtcc') : occurrences;
+  const byFrom = byDepartureStop(usable, config);
 
   const found = new Map<string, Journey>();
   const path: Occurrence[] = [];
