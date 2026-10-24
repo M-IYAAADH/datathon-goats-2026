@@ -59,3 +59,15 @@ describe('findJourneys on the sample bundle', () => {
     expect(mtcc?.transfers[0].assessment.status).toBe('safe');
   });
 });
+
+describe('officialOnly', () => {
+  const sample = validateBundle({ stops, legs, config, census, meta });
+  const q = { origin: 'THODDOO', destination: 'MALE', date: '2026-10-25', earliestDep: 0 };
+
+  it('excludes inferred legs when set, keeps them by default', () => {
+    expect(findJourneys(sample, q).some((j) => j.usesInferred)).toBe(true);
+    const off = findJourneys(sample, { ...q, officialOnly: true });
+    expect(off.length).toBeGreaterThan(0);
+    expect(off.every((j) => !j.usesInferred)).toBe(true);
+  });
+});

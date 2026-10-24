@@ -8,6 +8,7 @@
 .planner-swap,
 .planner-destination,
 .planner-submit,
+.planner-official,
 .form-error {
   grid-column: 1 / -1;
 }

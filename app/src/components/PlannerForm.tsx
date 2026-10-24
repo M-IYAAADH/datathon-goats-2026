@@ -162,7 +162,7 @@ export function PlannerForm({
         />
       </div>
 
-      <label className="field-label planner-official" style={{ gridColumn: '1 / -1' }}>
+      <label className="field-label planner-official">
         <input
           type="checkbox"
           checked={officialOnly}
