@@ -1,18 +1,21 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AttributionControl,
   GPUInitializationError,
   LngLatBounds,
   Map as MlMap,
   Marker,
+  Popup,
   setWorkerUrl,
   type GeoJSONSource,
   type MapOptions,
 } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import type { Leg, Stop } from '../data/load';
-import { readMapColors, useMapColors, type MapColors } from '../hooks/useMapColors';
+import { readMapColors, useMapColors, type MapColors, type TileTint } from '../hooks/useMapColors';
 import { Legend } from './Legend';
+import { StopPicker, type PickRole } from './StopPicker';
 import './MapView.css';
 
 // Vite pre-bundles maplibre-gl, which breaks its default worker lookup (next to its own
@@ -31,7 +34,10 @@ type MapViewProps = {
   boats?: BoatMarker[];
   cancelledLegIds?: string[];
   config?: MapConfig;
-  onStopClick?: (stopId: string) => void;
+  origin?: string;
+  destination?: string;
+  // When set, tapping an island offers "Set as origin" and "Set as destination".
+  onPickStop?: (stopId: string, role: PickRole) => void;
 };
 
 // Below this zoom only hubs and stops on the selected journey are labelled.
@@ -59,7 +65,12 @@ export type Segment = {
   a: Stop;
   b: Stop;
   official: boolean;
+  // Water route from a to b ([lon, lat]) out of routes.geojson; absent means a straight line.
+  path?: [number, number][];
 };
+
+// Stop-pair water routes keyed by pairKey, oriented from the smaller stop id to the larger.
+export type RoutePaths = Map<string, [number, number][]>;
 
 export type MapSegments = {
   base: Segment[];
@@ -69,7 +80,7 @@ export type MapSegments = {
 
 const MAP_LABEL = 'Map of island stops and boat connections';
 
-function pairKey(from: string, to: string): string {
+export function pairKey(from: string, to: string): string {
   return from < to ? `${from}|${to}` : `${to}|${from}`;
 }
 
@@ -79,8 +90,9 @@ function inferredVisible(leg: Leg, config?: MapConfig): boolean {
   return ev !== null && ev.devices >= config.minDevices && ev.days >= config.minDays;
 }
 
-// One straight line per unordered stop pair and source.
-function dedupe(legs: Leg[], byId: Map<string, Stop>): Segment[] {
+// One line per unordered stop pair and source, so an inferred service on an official pair
+// still shows (drawn offset beside the official line). Follows the water route when known.
+function dedupe(legs: Leg[], byId: Map<string, Stop>, paths?: RoutePaths): Segment[] {
   const out = new Map<string, Segment>();
   for (const leg of legs) {
     if (leg.from === leg.to) continue;
@@ -90,8 +102,10 @@ function dedupe(legs: Leg[], byId: Map<string, Stop>): Segment[] {
         : [byId.get(leg.to), byId.get(leg.from)];
     if (!a || !b) continue;
     const official = leg.source === 'mtcc';
-    const key = `${pairKey(a.id, b.id)}|${leg.source}`;
-    if (!out.has(key)) out.set(key, { key, a, b, official });
+    const pair = pairKey(a.id, b.id);
+    const key = `${pair}|${leg.source}`;
+    const path = paths?.get(pair);
+    if (!out.has(key)) out.set(key, path ? { key, a, b, official, path } : { key, a, b, official });
   }
   return [...out.values()];
 }
@@ -102,6 +116,7 @@ export function buildSegments(
   highlightLegIds: string[] = [],
   cancelledLegIds: string[] = [],
   config?: MapConfig,
+  paths?: RoutePaths,
 ): MapSegments {
   const byId = new Map(stops.map((s) => [s.id, s]));
   const hi = new Set(highlightLegIds);
@@ -111,14 +126,17 @@ export function buildSegments(
     base: dedupe(
       legs.filter((l) => hi.has(l.id) && inferredVisible(l, config)),
       byId,
+      paths,
     ),
     highlight: dedupe(
       legs.filter((l) => hi.has(l.id)),
       byId,
+      paths,
     ),
     cancelled: dedupe(
       legs.filter((l) => cx.has(l.id)),
       byId,
+      paths,
     ),
   };
 }
@@ -151,7 +169,7 @@ function lineCollection(segments: Segment[]): FeatureCollection {
       properties: { official: s.official },
       geometry: {
         type: 'LineString',
-        coordinates: [
+        coordinates: s.path ?? [
           [s.a.lon, s.a.lat],
           [s.b.lon, s.b.lat],
         ],
@@ -160,12 +178,16 @@ function lineCollection(segments: Segment[]): FeatureCollection {
   };
 }
 
-function stopCollection(stops: Stop[]): FeatureCollection {
+function stopCollection(stops: Stop[], origin?: string, destination?: string): FeatureCollection {
   return {
     type: 'FeatureCollection',
     features: stops.map((s) => ({
       type: 'Feature',
-      properties: { id: s.id, hub: s.kind === 'hub' },
+      properties: {
+        id: s.id,
+        hub: s.kind === 'hub',
+        role: s.id === origin ? 'origin' : s.id === destination ? 'destination' : '',
+      },
       geometry: { type: 'Point', coordinates: [s.lon, s.lat] },
     })),
   };
@@ -201,6 +223,46 @@ export function parseOverlay(raw: unknown): Overlay | null {
   });
   return {
     data: { type: 'FeatureCollection', features },
+    attribution: typeof fc.attribution === 'string' ? fc.attribution.trim() : '',
+  };
+}
+
+export type RouteSet = { paths: RoutePaths; attribution: string };
+
+const dist = (p: [number, number], s: Stop) => Math.hypot(p[0] - s.lon, p[1] - s.lat);
+
+// routes.geojson (tools/build_shapes.py --bundle): one LineString per stop pair, properties
+// a and b. Paths are re-oriented from the smaller stop id to the larger and their ends snapped
+// to the stop positions. Unusable features are skipped, so those pairs draw straight.
+export function parseRoutes(raw: unknown, stops: Stop[]): RouteSet | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const fc = raw as { type?: unknown; features?: unknown; attribution?: unknown };
+  if (fc.type !== 'FeatureCollection' || !Array.isArray(fc.features)) return null;
+  const byId = new Map(stops.map((s) => [s.id, s]));
+  const paths: RoutePaths = new Map();
+  for (const f of fc.features as ({ properties?: unknown; geometry?: unknown } | null)[]) {
+    const props = (f?.properties ?? {}) as { a?: unknown; b?: unknown };
+    const g = (f?.geometry ?? {}) as { type?: unknown; coordinates?: unknown };
+    if (typeof props.a !== 'string' || typeof props.b !== 'string') continue;
+    if (g.type !== 'LineString' || !Array.isArray(g.coordinates)) continue;
+    const [lo, hi] = props.a < props.b ? [props.a, props.b] : [props.b, props.a];
+    const a = byId.get(lo);
+    const b = byId.get(hi);
+    const pts = (g.coordinates as unknown[])
+      .filter(
+        (c): c is [number, number] =>
+          Array.isArray(c) && Number.isFinite(c[0]) && Number.isFinite(c[1]),
+      )
+      .map((c): [number, number] => [c[0], c[1]]);
+    if (!a || !b || pts.length < 2) continue;
+    const last = pts.length - 1;
+    if (dist(pts[0], b) + dist(pts[last], a) < dist(pts[0], a) + dist(pts[last], b)) pts.reverse();
+    pts[0] = [a.lon, a.lat];
+    pts[last] = [b.lon, b.lat];
+    paths.set(pairKey(lo, hi), pts);
+  }
+  return {
+    paths,
     attribution: typeof fc.attribution === 'string' ? fc.attribution.trim() : '',
   };
 }
@@ -250,15 +312,68 @@ async function loadOverlay(file: string): Promise<Overlay | null> {
   }
 }
 
+async function loadRoutes(stops: Stop[]): Promise<RouteSet | null> {
+  const file = 'routes.geojson';
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}data/${file}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const parsed = parseRoutes(await res.json(), stops);
+    if (!parsed) throw new Error('not a GeoJSON FeatureCollection');
+    return parsed;
+  } catch (e) {
+    if (warnedOverlays.has(file)) return null;
+    warnedOverlays.add(file);
+    console.warn(
+      `Map: ${file} not loaded, drawing straight lines (${e instanceof Error ? e.message : String(e)})`,
+    );
+    return null;
+  }
+}
+
 function landFill(c: MapColors) {
   return ['case', ['==', ['get', 'isStop'], true], c.landStop, c.land] as unknown as string;
 }
 
-// No tiles, no glyphs, no sprites: only local GeoJSON overlays are fetched.
+function stopFill(c: MapColors) {
+  return [
+    'case',
+    ['==', ['get', 'role'], 'origin'],
+    c.origin,
+    ['==', ['get', 'role'], 'destination'],
+    c.destination,
+    ['get', 'hub'],
+    c.hub,
+    c.stop,
+  ] as unknown as string;
+}
+
+function tilePaint(t: TileTint) {
+  return {
+    'raster-opacity': t.opacity,
+    'raster-hue-rotate': t.hue,
+    'raster-saturation': t.saturation,
+    'raster-contrast': t.contrast,
+    'raster-brightness-min': t.brightnessMin,
+    'raster-brightness-max': t.brightnessMax,
+  };
+}
+
+const OSM_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+
+// OpenStreetMap raster tiles, tinted by the theme tokens, under the local GeoJSON overlays.
+// Offline the tiles just fail and the plain water background shows. No glyphs or sprites.
 function buildStyle(c: MapColors): Exclude<MapOptions['style'], string | undefined> {
   return {
     version: 8,
     sources: {
+      osm: {
+        type: 'raster',
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        tileSize: 256,
+        maxzoom: 19,
+        attribution: OSM_ATTRIBUTION,
+      },
       atolls: { type: 'geojson', data: EMPTY },
       land: { type: 'geojson', data: EMPTY },
       lines: { type: 'geojson', data: EMPTY },
@@ -268,6 +383,7 @@ function buildStyle(c: MapColors): Exclude<MapOptions['style'], string | undefin
     },
     layers: [
       { id: 'bg', type: 'background', paint: { 'background-color': c.background } },
+      { id: 'basemap', type: 'raster', source: 'osm', paint: tilePaint(c.tile) },
       {
         id: 'atoll-fill',
         type: 'fill',
@@ -333,10 +449,10 @@ function buildStyle(c: MapColors): Exclude<MapOptions['style'], string | undefin
         type: 'circle',
         source: 'stops',
         paint: {
-          'circle-radius': ['case', ['get', 'hub'], 7, 5],
-          'circle-color': ['case', ['get', 'hub'], c.hub, c.stop],
+          'circle-radius': ['case', ['!=', ['get', 'role'], ''], 8, ['get', 'hub'], 7, 5],
+          'circle-color': stopFill(c),
           'circle-stroke-color': c.halo,
-          'circle-stroke-width': 1.5,
+          'circle-stroke-width': ['case', ['!=', ['get', 'role'], ''], 2.5, 1.5],
         },
       },
     ],
@@ -346,6 +462,12 @@ function buildStyle(c: MapColors): Exclude<MapOptions['style'], string | undefin
 function applyColors(map: MlMap, c: MapColors) {
   const has = (layer: string) => !!map.getLayer(layer);
   if (has('bg')) map.setPaintProperty('bg', 'background-color', c.background);
+  if (has('basemap')) {
+    const paint = tilePaint(c.tile);
+    for (const prop of Object.keys(paint) as (keyof typeof paint)[]) {
+      map.setPaintProperty('basemap', prop, paint[prop]);
+    }
+  }
   if (has('atoll-fill')) map.setPaintProperty('atoll-fill', 'fill-color', c.atoll);
   if (has('atoll-outline')) map.setPaintProperty('atoll-outline', 'line-color', c.atoll);
   if (has('land-fill')) map.setPaintProperty('land-fill', 'fill-color', landFill(c));
@@ -355,7 +477,7 @@ function applyColors(map: MlMap, c: MapColors) {
   if (has('lines-highlight')) map.setPaintProperty('lines-highlight', 'line-color', c.highlight);
   if (has('lines-cancelled')) map.setPaintProperty('lines-cancelled', 'line-color', c.cancelled);
   if (has('stops')) {
-    map.setPaintProperty('stops', 'circle-color', ['case', ['get', 'hub'], c.hub, c.stop]);
+    map.setPaintProperty('stops', 'circle-color', stopFill(c));
     map.setPaintProperty('stops', 'circle-stroke-color', c.halo);
   }
 }
@@ -379,24 +501,29 @@ export function MapView({
   boats,
   cancelledLegIds,
   config,
-  onStopClick,
+  origin,
+  destination,
+  onPickStop,
 }: MapViewProps) {
   const [fallback, setFallback] = useState(() => !webglSupported());
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
   const loadedRef = useRef(false);
-  const clickRef = useRef(onStopClick);
-  clickRef.current = onStopClick;
+  const pickRef = useRef(onPickStop);
+  pickRef.current = onPickStop;
+  const popupRef = useRef<Popup | null>(null);
+  const [picked, setPicked] = useState<{ stop: Stop; el: HTMLElement } | null>(null);
   const colors = useMapColors();
   const colorsRef = useRef(colors);
   colorsRef.current = colors;
 
+  const [routes, setRoutes] = useState<RouteSet | null>(null);
   const segments = useMemo(
-    () => buildSegments(stops, legs, highlightLegIds, cancelledLegIds, config),
-    [stops, legs, highlightLegIds, cancelledLegIds, config],
+    () => buildSegments(stops, legs, highlightLegIds, cancelledLegIds, config, routes?.paths),
+    [stops, legs, highlightLegIds, cancelledLegIds, config, routes],
   );
-  const dataRef = useRef({ stops, segments });
-  dataRef.current = { stops, segments };
+  const dataRef = useRef({ stops, segments, origin, destination });
+  dataRef.current = { stops, segments, origin, destination };
   const [land, setLand] = useState<Overlay | null>(null);
   const [atolls, setAtolls] = useState<Overlay | null>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -414,6 +541,16 @@ export function MapView({
       live = false;
     };
   }, []);
+
+  // Water routes are keyed by stop id, so they are parsed once the stops are known.
+  useEffect(() => {
+    if (stops.length === 0) return;
+    let live = true;
+    void loadRoutes(stops).then((r) => live && setRoutes(r));
+    return () => {
+      live = false;
+    };
+  }, [stops]);
 
   useEffect(() => {
     if (fallback || !containerRef.current) return;
@@ -437,15 +574,30 @@ export function MapView({
     map.on('load', () => {
       loadedRef.current = true;
       applyColors(map, colorsRef.current);
-      applyData(map, dataRef.current.stops, dataRef.current.segments);
+      const d = dataRef.current;
+      applyData(map, d.stops, d.segments, d.origin, d.destination);
       setMapReady(true);
     });
+    // Tapping an island opens a popup whose content (StopPicker) is rendered through a portal.
     map.on('click', 'stops', (e) => {
       const id = e.features?.[0]?.properties?.id;
-      if (typeof id === 'string') clickRef.current?.(id);
+      const stop = dataRef.current.stops.find((s) => s.id === id);
+      if (!stop || !pickRef.current) return;
+      popupRef.current?.remove();
+      const el = document.createElement('div');
+      const popup = new Popup({ offset: 12, maxWidth: '260px', closeButton: false })
+        .setLngLat([stop.lon, stop.lat])
+        .setDOMContent(el)
+        .addTo(map);
+      popup.on('close', () => {
+        if (popupRef.current === popup) popupRef.current = null;
+        setPicked((p) => (p?.el === el ? null : p));
+      });
+      popupRef.current = popup;
+      setPicked({ stop, el });
     });
     map.on('mouseenter', 'stops', () => {
-      map.getCanvas().style.cursor = clickRef.current ? 'pointer' : '';
+      map.getCanvas().style.cursor = pickRef.current ? 'pointer' : '';
     });
     map.on('mouseleave', 'stops', () => {
       map.getCanvas().style.cursor = '';
@@ -455,6 +607,7 @@ export function MapView({
     resizer?.observe(containerRef.current);
     return () => {
       resizer?.disconnect();
+      popupRef.current?.remove();
       loadedRef.current = false;
       setMapReady(false);
       mapRef.current = null;
@@ -469,8 +622,8 @@ export function MapView({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (map && loadedRef.current) applyData(map, stops, segments);
-  }, [stops, segments]);
+    if (map && loadedRef.current) applyData(map, stops, segments, origin, destination);
+  }, [stops, segments, origin, destination]);
 
   // Fit to the selected journey when there is one, otherwise to all stops.
   useEffect(() => {
@@ -488,12 +641,18 @@ export function MapView({
     (map.getSource('atolls') as GeoJSONSource | undefined)?.setData(atolls?.data ?? EMPTY);
   }, [land, atolls, mapReady]);
 
-  // OneMap licence credit (and any other attribution the overlay files carry).
+  // OpenStreetMap credit (from the tile source) plus the OneMap licence and any other
+  // attribution the overlay and route files carry.
   useEffect(() => {
     const map = mapRef.current;
-    const text = [...new Set([land?.attribution, atolls?.attribution].filter(Boolean))].join(' | ');
-    if (!map || !mapReady || !text) return;
-    const control = new AttributionControl({ compact: true, customAttribution: text });
+    if (!map || !mapReady) return;
+    const text = [
+      ...new Set([land?.attribution, atolls?.attribution, routes?.attribution].filter(Boolean)),
+    ].join(' | ');
+    const control = new AttributionControl({
+      compact: true,
+      customAttribution: text || undefined,
+    });
     // The credit is long: start collapsed to the (i) button at every width (tap to read it),
     // and on phones put it top-right since the legend is bottom-left.
     const narrow = map.getContainer().clientWidth < 600;
@@ -505,7 +664,7 @@ export function MapView({
     return () => {
       map.removeControl(control);
     };
-  }, [land, atolls, mapReady]);
+  }, [land, atolls, routes, mapReady]);
 
   // Atoll names: one quiet HTML label per atoll at its hull centroid.
   useEffect(() => {
@@ -543,7 +702,8 @@ export function MapView({
     return () => markers.forEach((m) => m.remove());
   }, [boats, stops, fallback, mapReady]);
 
-  // Names as HTML labels, since the style has no glyphs for symbol layers.
+  // Names as HTML labels, since the style has no glyphs for symbol layers. Origin and
+  // destination carry "From" / "To" so the choice is not shown by colour alone.
   useEffect(() => {
     const map = mapRef.current;
     if (fallback || !map) return;
@@ -552,11 +712,12 @@ export function MapView({
       .map((s) => {
         const el = document.createElement('span');
         el.className = 'map-label';
-        el.textContent = s.name;
+        el.textContent = stopLabel(s, origin, destination);
         const marker = new Marker({ element: el, anchor: 'left', offset: [9, 0] })
           .setLngLat([s.lon, s.lat])
           .addTo(map);
-        const rank = onRoute.has(s.id) ? 0 : s.kind === 'hub' ? 1 : 2;
+        const chosen = s.id === origin || s.id === destination;
+        const rank = chosen || onRoute.has(s.id) ? 0 : s.kind === 'hub' ? 1 : 2;
         return { s, el, marker, rank };
       })
       .sort((a, b) => a.rank - b.rank);
@@ -585,53 +746,72 @@ export function MapView({
       map.off('moveend', place);
       labels.forEach((l) => l.marker.remove());
     };
-  }, [stops, routeKey, fallback, mapReady]);
+  }, [stops, routeKey, origin, destination, fallback, mapReady]);
 
   return (
     <div className="map-view">
       {fallback ? (
-        <SvgMap stops={stops} segments={segments} boats={boats} onStopClick={onStopClick} />
+        <SvgMap
+          stops={stops}
+          segments={segments}
+          origin={origin}
+          destination={destination}
+          onPickStop={onPickStop}
+        />
       ) : (
-        <>
-          <div ref={containerRef} className="map-canvas" role="region" aria-label={MAP_LABEL} />
-          {onStopClick && (
-            <ul className="visually-hidden" aria-label="Select a stop">
-              {stops.map((s) => (
-                <li key={s.id}>
-                  <button type="button" onClick={() => onStopClick(s.id)}>
-                    {s.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
+        <div ref={containerRef} className="map-canvas" role="region" aria-label={MAP_LABEL} />
       )}
+      {picked &&
+        createPortal(
+          <StopPicker
+            stop={picked.stop}
+            onPick={(role) => {
+              onPickStop?.(picked.stop.id, role);
+              popupRef.current?.remove();
+            }}
+            onClose={() => popupRef.current?.remove()}
+          />,
+          picked.el,
+        )}
       <Legend />
     </div>
   );
 }
 
-function applyData(map: MlMap, stops: Stop[], segments: MapSegments) {
+function stopLabel(s: Stop, origin?: string, destination?: string): string {
+  if (s.id === origin) return `From: ${s.name}`;
+  if (s.id === destination) return `To: ${s.name}`;
+  return s.name;
+}
+
+function applyData(
+  map: MlMap,
+  stops: Stop[],
+  segments: MapSegments,
+  origin?: string,
+  destination?: string,
+) {
   const set = (id: string, data: FeatureCollection) =>
     (map.getSource(id) as GeoJSONSource | undefined)?.setData(data);
   set('lines', lineCollection(segments.base));
   set('highlight', lineCollection(segments.highlight));
   set('cancelled', lineCollection(segments.cancelled));
-  set('stops', stopCollection(stops));
+  set('stops', stopCollection(stops, origin, destination));
 }
 
 type SvgMapProps = {
   stops: Stop[];
   segments: MapSegments;
-  boats?: BoatMarker[];
-  onStopClick?: (stopId: string) => void;
+  origin?: string;
+  destination?: string;
+  onPickStop?: (stopId: string, role: PickRole) => void;
 };
 
 const SVG_W = 1000;
 const SVG_PAD = 60;
 
-export function SvgMap({ stops, segments, boats, onStopClick }: SvgMapProps) {
+export function SvgMap({ stops, segments, origin, destination, onPickStop }: SvgMapProps) {
+  const [pickedId, setPickedId] = useState<string | null>(null);
   const proj = useMemo(() => {
     if (stops.length === 0) return null;
     const lats = stops.map((s) => s.lat);
@@ -664,100 +844,107 @@ export function SvgMap({ stops, segments, boats, onStopClick }: SvgMapProps) {
     );
   }
 
+  // Follows the water route when there is one; inferred lines are offset beside official ones.
   const line = (s: Segment, token: string, width: number, dash?: string, offset = 0) => {
-    const x1 = proj.x(s.a.lon);
-    const y1 = proj.y(s.a.lat);
-    const x2 = proj.x(s.b.lon);
-    const y2 = proj.y(s.b.lat);
+    const pts = (
+      s.path ?? [
+        [s.a.lon, s.a.lat],
+        [s.b.lon, s.b.lat],
+      ]
+    ).map(([lon, lat]) => [proj.x(lon), proj.y(lat)]);
+    const [x1, y1] = pts[0];
+    const [x2, y2] = pts[pts.length - 1];
     const len = Math.hypot(x2 - x1, y2 - y1) || 1;
     const ox = ((y2 - y1) / len) * offset;
     const oy = (-(x2 - x1) / len) * offset;
     return (
-      <line
+      <polyline
         key={s.key}
-        x1={x1 + ox}
-        y1={y1 + oy}
-        x2={x2 + ox}
-        y2={y2 + oy}
+        points={pts.map(([x, y]) => `${x + ox},${y + oy}`).join(' ')}
+        fill="none"
         style={{ stroke: `var(${token})` }}
         strokeWidth={width}
         strokeDasharray={dash}
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
     );
   };
 
+  const fill = (s: Stop) =>
+    s.id === origin
+      ? 'var(--map-origin)'
+      : s.id === destination
+        ? 'var(--map-destination)'
+        : s.kind === 'hub'
+          ? 'var(--map-hub)'
+          : 'var(--map-stop)';
+  const pickedStop = stops.find((s) => s.id === pickedId);
+
   return (
-    <svg
-      className="map-svg"
-      viewBox={`0 0 ${proj.w} ${proj.h}`}
-      preserveAspectRatio="xMidYMid meet"
-      role="img"
-      aria-labelledby="map-svg-title"
-    >
-      <title id="map-svg-title">{`${MAP_LABEL} (simplified view, WebGL unavailable)`}</title>
-      <rect width={proj.w} height={proj.h} className="map-svg-bg" />
-      <g opacity={0.35}>{segments.highlight.map((s) => line(s, '--map-highlight', 12))}</g>
-      <g>
-        {segments.base.map((s) =>
-          s.official ? line(s, '--map-official', 3) : line(s, '--map-inferred', 3, '10 7'),
-        )}
-      </g>
-      <g>{segments.cancelled.map((s) => line(s, '--map-cancelled', 5, '6 5'))}</g>
-      <g>
-        {stops.map((s) => (
-          <g
-            key={s.id}
-            className={onStopClick ? 'map-svg-stop clickable' : 'map-svg-stop'}
-            onClick={onStopClick ? () => onStopClick(s.id) : undefined}
-            {...(onStopClick
-              ? {
-                  role: 'button',
-                  tabIndex: 0,
-                  'aria-label': s.name,
-                  onKeyDown: (e: KeyboardEvent<SVGGElement>) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onStopClick(s.id);
-                    }
-                  },
-                }
-              : {})}
-          >
-            <circle
-              cx={proj.x(s.lon)}
-              cy={proj.y(s.lat)}
-              r={s.kind === 'hub' ? 9 : 7}
-              style={{
-                fill: s.kind === 'hub' ? 'var(--map-hub)' : 'var(--map-stop)',
-                stroke: 'var(--map-halo)',
-              }}
-              strokeWidth={2}
-            />
-            <text x={proj.x(s.lon) + 13} y={proj.y(s.lat) + 6} className="map-svg-label">
-              {s.name}
-            </text>
-          </g>
-        ))}
-      </g>
-      <g>
-        {(boats ?? []).flatMap((b) => {
-          const s = stops.find((x) => x.id === b.stopId);
-          return s
-            ? [
-                <text
-                  key={`${b.stopId}-${b.label}`}
-                  x={proj.x(s.lon)}
-                  y={proj.y(s.lat) - 16}
-                  textAnchor="middle"
-                  className={`map-svg-boat${b.official ? '' : ' inferred'}`}
-                >
-                  {`\u26F4 ${b.label}`}
-                </text>,
-              ]
-            : [];
-        })}
-      </g>
-    </svg>
+    <>
+      <svg
+        className="map-svg"
+        viewBox={`0 0 ${proj.w} ${proj.h}`}
+        preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-labelledby="map-svg-title"
+      >
+        <title id="map-svg-title">{`${MAP_LABEL} (simplified view, WebGL unavailable)`}</title>
+        <rect width={proj.w} height={proj.h} className="map-svg-bg" />
+        <g>
+          {segments.base.map((s) =>
+            s.official ? line(s, '--map-official', 3) : line(s, '--map-inferred', 3, '10 7', 6),
+          )}
+        </g>
+        <g>{segments.highlight.map((s) => line(s, '--map-highlight', 8))}</g>
+        <g>{segments.cancelled.map((s) => line(s, '--map-cancelled', 5, '6 5'))}</g>
+        <g>
+          {stops.map((s) => (
+            <g
+              key={s.id}
+              className={onPickStop ? 'map-svg-stop clickable' : 'map-svg-stop'}
+              onClick={onPickStop ? () => setPickedId(s.id) : undefined}
+              {...(onPickStop
+                ? {
+                    role: 'button',
+                    tabIndex: 0,
+                    'aria-label': stopLabel(s, origin, destination),
+                    onKeyDown: (e: KeyboardEvent<SVGGElement>) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setPickedId(s.id);
+                      }
+                    },
+                  }
+                : {})}
+            >
+              <circle
+                cx={proj.x(s.lon)}
+                cy={proj.y(s.lat)}
+                r={s.id === origin || s.id === destination ? 11 : s.kind === 'hub' ? 9 : 7}
+                style={{ fill: fill(s), stroke: 'var(--map-halo)' }}
+                strokeWidth={2}
+              />
+              <text x={proj.x(s.lon) + 13} y={proj.y(s.lat) + 6} className="map-svg-label">
+                {stopLabel(s, origin, destination)}
+              </text>
+            </g>
+          ))}
+        </g>
+      </svg>
+      {pickedStop && onPickStop && (
+        <div className="map-pick-card">
+          <StopPicker
+            stop={pickedStop}
+            onPick={(role) => {
+              onPickStop(pickedStop.id, role);
+              setPickedId(null);
+            }}
+            onClose={() => setPickedId(null)}
+          />
+        </div>
+      )}
+    </>
   );
 }

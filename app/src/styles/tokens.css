@@ -43,6 +43,16 @@
   --map-land-outline: #b9a77a;
   --map-atoll: #5f8f9a;
 
+  --map-origin: #111827;
+  --map-destination: #7c3aed;
+  /* OpenStreetMap tiles, tinted toward the Lagoon water and land tokens (MapLibre raster paint). */
+  --map-tile-opacity: 0.6;
+  --map-tile-hue: 0;
+  --map-tile-saturation: -0.55;
+  --map-tile-contrast: -0.1;
+  --map-tile-brightness-min: 0.08;
+  --map-tile-brightness-max: 1;
+
   /* Reference-style short names, mapped onto the theme tokens above (so dark mode follows). */
   --bg: var(--color-bg);
   --panel: var(--color-surface);
@@ -141,6 +151,16 @@
     --map-land-outline: #56705f;
     --map-atoll: #5d8a94;
 
+    --map-origin: #f8fafc;
+    --map-destination: #c4b5fd;
+    /* Tiles inverted (brightness min > max) and hue-rotated back so water stays blue. */
+    --map-tile-opacity: 0.7;
+    --map-tile-hue: 180;
+    --map-tile-saturation: -0.35;
+    --map-tile-contrast: 0;
+    --map-tile-brightness-min: 0.85;
+    --map-tile-brightness-max: 0.05;
+
     --shadow-1: 0 1px 2px rgb(0 0 0 / 40%);
     --shadow-2: 0 4px 12px rgb(0 0 0 / 45%);
   }
@@ -189,6 +209,16 @@
   --map-land-stop: #3a4d40;
   --map-land-outline: #56705f;
   --map-atoll: #5d8a94;
+
+  --map-origin: #f8fafc;
+  --map-destination: #c4b5fd;
+  /* Tiles inverted (brightness min > max) and hue-rotated back so water stays blue. */
+  --map-tile-opacity: 0.7;
+  --map-tile-hue: 180;
+  --map-tile-saturation: -0.35;
+  --map-tile-contrast: 0;
+  --map-tile-brightness-min: 0.85;
+  --map-tile-brightness-max: 0.05;
 
   --shadow-1: 0 1px 2px rgb(0 0 0 / 40%);
   --shadow-2: 0 4px 12px rgb(0 0 0 / 45%);
