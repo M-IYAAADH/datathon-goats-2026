@@ -6,6 +6,7 @@ import { HowItWorks } from './components/HowItWorks';
 import { JourneyList } from './components/JourneyList';
 import { MapView } from './components/MapView';
 import { PlannerForm } from './components/PlannerForm';
+import type { PickRole } from './components/StopPicker';
 import { loadBundle, type Bundle, type Leg, type Stop } from './data/load';
 import { findJourneys, type Journey, type JourneyQuery } from './data/planner';
 import { useTheme } from './hooks/useTheme';
@@ -37,6 +38,8 @@ const TABS: { id: Tab; label: string }[] = [
 export function App() {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [query, setQuery] = useState<JourneyQuery | null>(null);
+  const [origin, setOrigin] = useState('');
+  const [destination, setDestination] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [results, setResults] = useState<Journey[] | null>(null);
   const [scenario, setScenario] = useState<Scenario | null>(null);
@@ -64,6 +67,18 @@ export function App() {
     const found = findJourneys(ready, q);
     setResults(found);
     setSelectedId(found[0]?.id ?? null);
+  }
+
+  // Tapping an island on the map fills the planner. Picking the island already in the other
+  // field swaps them rather than leaving origin and destination equal.
+  function handlePickStop(stopId: string, role: PickRole) {
+    const [mine, other, setMine, setOther] =
+      role === 'origin'
+        ? [origin, destination, setOrigin, setDestination]
+        : [destination, origin, setDestination, setOrigin];
+    if (stopId === other) setOther(mine);
+    setMine(stopId);
+    setTab('plan');
   }
 
   // During a simulated cancellation the map shows the new best route instead of the selection.
@@ -124,7 +139,14 @@ export function App() {
             >
               <div className="region" id="planner-form" aria-label="Planner form">
                 {ready ? (
-                  <PlannerForm stops={ready.stops} onSubmit={handleSubmit} />
+                  <PlannerForm
+                    stops={ready.stops}
+                    origin={origin}
+                    destination={destination}
+                    onOriginChange={setOrigin}
+                    onDestinationChange={setDestination}
+                    onSubmit={handleSubmit}
+                  />
                 ) : (
                   <p className="placeholder">
                     {state.status === 'loading'
@@ -181,6 +203,9 @@ export function App() {
               config={ready?.config}
               highlightLegIds={highlightLegIds}
               cancelledLegIds={cancelledLegIds}
+              origin={origin}
+              destination={destination}
+              onPickStop={handlePickStop}
             />
           </div>
         </section>

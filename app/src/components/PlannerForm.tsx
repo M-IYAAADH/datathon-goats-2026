@@ -5,6 +5,11 @@ import './PlannerForm.css';
 
 type Props = {
   stops: Stop[];
+  // Origin and destination are owned by the parent so taps on the map can set them.
+  origin: string;
+  destination: string;
+  onOriginChange: (stopId: string) => void;
+  onDestinationChange: (stopId: string) => void;
   defaultDate?: string;
   onSubmit: (q: JourneyQuery) => void;
   disabled?: boolean;
@@ -15,6 +20,10 @@ const DEFAULT_TIME = '06:00';
 
 export function PlannerForm({
   stops,
+  origin,
+  destination,
+  onOriginChange,
+  onDestinationChange,
   defaultDate = DEFAULT_DATE,
   onSubmit,
   disabled = false,
@@ -28,8 +37,6 @@ export function PlannerForm({
     error: `${uid}-error`,
   };
 
-  const [origin, setOrigin] = useState('');
-  const [destination, setDestination] = useState('');
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState(DEFAULT_TIME);
   const [officialOnly, setOfficialOnly] = useState(false);
@@ -48,8 +55,8 @@ export function PlannerForm({
   }, [stops]);
 
   function swap() {
-    setOrigin(destination);
-    setDestination(origin);
+    onOriginChange(destination);
+    onDestinationChange(origin);
     setError(null);
   }
 
@@ -92,7 +99,7 @@ export function PlannerForm({
           id={ids.origin}
           className="select"
           value={origin}
-          onChange={(e) => setOrigin(e.target.value)}
+          onChange={(e) => onOriginChange(e.target.value)}
           disabled={disabled}
           aria-describedby={error ? ids.error : undefined}
         >
@@ -135,7 +142,7 @@ export function PlannerForm({
           id={ids.destination}
           className="select"
           value={destination}
-          onChange={(e) => setDestination(e.target.value)}
+          onChange={(e) => onDestinationChange(e.target.value)}
           disabled={disabled}
           aria-describedby={error ? ids.error : undefined}
         >

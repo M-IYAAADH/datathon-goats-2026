@@ -2,15 +2,20 @@
 
 Each consecutive stop pair in the feed is routed over a marine graph made of
   * OSM ferry routes (route=ferry ways), preferred, and
-  * a ~3 km open-water grid plus short connector edges, used only where OSM has
-    no ferry route. These edges never cross an OSM coastline.
-Inferred (non-OSM) parts are straightened where the coast allows, and every
-shape point is tagged with shape_pt_source = osm | inferred.
-
-Reefs are not modelled: inferred paths avoid islands, not reef flats.
+  * an open-water grid plus short connector edges, used only where OSM has
+    no ferry route. These edges never cross an OSM coastline, and running over
+    an OSM reef (natural=reef) costs REEF_COST times more, so inferred paths
+    leave a lagoon through a gap in the atoll rim instead of over the reef.
+Inferred (non-OSM) parts are straightened where the coast and reefs allow, and
+every shape point is tagged with shape_pt_source = osm | inferred.
 
 Usage
   python build_shapes.py --gtfs ../data --out ../data [--crossings ../data/crossings.csv]
+  python build_shapes.py --bundle ../app/public/data
+
+With --bundle, stop pairs come from the app's stops.json and legs.json and the
+result is written to routes.geojson in the same folder (one LineString per
+unordered stop pair; property osm is the share of its length on OSM ferry routes).
 
 Writes to --out:
   shapes.txt             one shape per distinct stop sequence
@@ -24,8 +29,11 @@ from collections import defaultdict
 
 OVERPASS = 'https://overpass-api.de/api/interpreter'
 UA = 'island-connectivity-dashboard/0.1 (build_shapes.py)'
-GRID_DEG = 0.03          # open-water grid spacing (~3.3 km)
+GRID_DEG = 0.03          # open-water grid spacing (~3.3 km); --bundle uses BUNDLE_GRID_DEG
+BUNDLE_GRID_DEG = 0.01   # ~1.1 km, fine enough to find the passes through atoll rims
 PENALTY = 1.4            # cost multiplier for non-OSM edges
+REEF_COST = 12.0         # extra cost multiplier for the part of a non-OSM edge that is over reef
+REEF_STEP_KM = 0.15      # sampling step when measuring how much of an edge is over reef
 LINK_KM = 3.0            # ferry vertex <-> grid / other ferry ways
 STOP_LINK_KM = 6.0       # stop <-> network
 CELL = 0.01              # coastline spatial index cell (deg)
@@ -142,9 +150,45 @@ class Land:
         return best
 
 
+class Reef:
+    """OSM reef areas (closed ways and multipolygon relations) for point-in-reef tests.
+
+    Relation members are not stitched into rings: an even-odd ray cast over all of a
+    feature's outer and inner member segments gives the same answer."""
+
+    def __init__(self, elements):
+        self.band = defaultdict(list)  # lat band -> [(feature, a, b)]
+        for f, e in enumerate(elements):
+            if e['type'] == 'way':
+                lines = [e.get('geometry', [])]
+            else:
+                lines = [m.get('geometry', []) for m in e.get('members', []) if m.get('role') in ('outer', 'inner')]
+            for g in lines:
+                pts = [(q['lat'], q['lon']) for q in g if q]
+                for a, b in zip(pts, pts[1:]):
+                    for cy in range(int(min(a[0], b[0]) // CELL), int(max(a[0], b[0]) // CELL) + 1):
+                        self.band[cy].append((f, a, b))
+
+    def contains(self, p):
+        y, x = p
+        odd = set()
+        for f, a, b in self.band.get(int(y // CELL), ()):
+            if (a[0] > y) != (b[0] > y) and x < (b[1] - a[1]) * (y - a[0]) / (b[0] - a[0]) + a[1]:
+                odd ^= {f}
+        return bool(odd)
+
+    def km(self, a, b):
+        """Approximate length of the segment a-b that lies over reef."""
+        d = hav(a, b)
+        n = max(1, int(d / REEF_STEP_KM))
+        hits = sum(self.contains(lerp(a, b, (k + 0.5) / n)) for k in range(n))
+        return d * hits / n
+
+
 # ---------- graph ----------
 class Graph:
-    def __init__(self):
+    def __init__(self, reef=None):
+        self.reef = reef
         self.pos, self.adj, self.kind = [], defaultdict(list), []
         self.key = {}
         self.hash = defaultdict(list)
@@ -162,7 +206,11 @@ class Graph:
 
     def edge(self, a, b, src):
         d = hav(self.pos[a], self.pos[b])
-        w = d if src == 'osm' else d * PENALTY
+        if src == 'osm':
+            w = d
+        else:
+            r = self.reef.km(self.pos[a], self.pos[b]) if self.reef else 0.0
+            w = (d + r * (REEF_COST - 1)) * PENALTY
         self.adj[a].append((b, w, src))
         self.adj[b].append((a, w, src))
 
@@ -179,6 +227,25 @@ class Graph:
                     if d <= km:
                         out.append((d, i))
         return sorted(out)
+
+    def prune(self, min_size):
+        """Drop components smaller than min_size from the spatial hash, so stops never attach
+        to water pockets sealed in by a coastline (lakes, or gaps where a coast way is open)."""
+        comp = {}
+        for s0 in range(len(self.pos)):
+            if s0 in comp:
+                continue
+            comp[s0], stack, members = s0, [s0], [s0]
+            while stack:
+                for v, _, _ in self.adj[stack.pop()]:
+                    if v not in comp:
+                        comp[v] = s0
+                        stack.append(v)
+                        members.append(v)
+            if len(members) < min_size:
+                dead = set(members)
+                for k, ids in self.hash.items():
+                    self.hash[k] = [i for i in ids if i not in dead]
 
     def dijkstra(self, s, t):
         dist, prev = {s: 0.0}, {}
@@ -205,8 +272,8 @@ class Graph:
         return [(path[i][0], path[i + 1][1] if i + 1 < len(path) else None) for i in range(len(path))]
 
 
-def build_graph(ferry, land, bbox):
-    G = Graph()
+def build_graph(ferry, land, bbox, reef=None, grid_deg=GRID_DEG):
+    G = Graph(reef)
     s, w, n, e = bbox
     # OSM ferry routes
     for way in ferry:
@@ -223,9 +290,9 @@ def build_graph(ferry, land, bbox):
         while lon <= e:
             if not land.on_land((lat, lon)):
                 grid[(r, c)] = G.node((lat, lon), 'grid')
-            lon += GRID_DEG
+            lon += grid_deg
             c += 1
-        lat += GRID_DEG
+        lat += grid_deg
         r += 1
     for (r, c), i in grid.items():
         for dr, dc in ((0, 1), (1, 0), (1, 1), (1, -1)):
@@ -246,6 +313,7 @@ def build_graph(ferry, land, bbox):
         for d, j in G.near(p, 1.5, kinds=('ferry',))[:6]:
             if j != i and not any(v == j for v, _, _ in G.adj[i]) and not land.crosses(p, G.pos[j]):
                 G.edge(i, j, 'inferred')
+    G.prune(50)
     return G
 
 
@@ -276,7 +344,13 @@ def route_pair(G, land, a, b, stops):
         return [(pa, 'inferred'), (pb, 'inferred')]
     pts = [(G.pos[n], src or 'inferred') for n, src in path]
 
+    def reef_km(i, k):
+        return sum(G.reef.km(pts[m][0], pts[m + 1][0]) for m in range(i, k)) if G.reef else 0.0
+
     def clear(p, q, i, j):
+        # a shortcut may not add reef exposure, so paths keep to the passes
+        if G.reef and G.reef.km(p, q) > reef_km(i, j) + 0.05:
+            return False
         # exempt the stop's own island at either end
         if i == 0:
             d = hav(p, q)
@@ -349,15 +423,81 @@ def shape_rows(shape_id, pts):
     return rows
 
 
+def route_all(pos, pairs, cache, grid_deg=GRID_DEG):
+    """Route each (a, b) stop pair; returns {(a, b): [((lat, lon), source), ...]}."""
+    lats, lons = [p[0] for p in pos.values()], [p[1] for p in pos.values()]
+    bbox = (min(lats) - 0.15, min(lons) - 0.15, max(lats) + 0.15, max(lons) + 0.15)
+    bb = f'{bbox[0]:.3f},{bbox[1]:.3f},{bbox[2]:.3f},{bbox[3]:.3f}'
+    tag = bb.replace(',', '_')
+    ferry = overpass(f'[out:json][timeout:180];way["route"="ferry"]({bb});out geom;',
+                     os.path.join(cache, f'ferry_{tag}.json'))['elements']
+    coast = overpass(f'[out:json][timeout:180];way["natural"="coastline"]({bb});out geom;',
+                     os.path.join(cache, f'coast_{tag}.json'))['elements']
+    reefs = overpass(f'[out:json][timeout:180];(way["natural"="reef"]({bb});relation["natural"="reef"]({bb}););'
+                     'out geom;', os.path.join(cache, f'reef_{tag}.json'))['elements']
+    print(f'OSM: {len(ferry)} ferry ways, {len(coast)} coastline ways, {len(reefs)} reefs', file=sys.stderr)
+
+    land = Land(coast)
+    G = build_graph(ferry, land, bbox, Reef(reefs), grid_deg)
+    used = {s for p in pairs for s in p}
+    stops = {s: attach_stop(G, land, s, pos[s]) for s in used}
+    print(f'graph: {len(G.pos)} nodes; routing {len(pairs)} stop pairs', file=sys.stderr)
+
+    seg = {}
+    for a, b in sorted(pairs):
+        if (b, a) in seg:
+            seg[(a, b)] = list(reversed([(c, s) for c, s in seg[(b, a)]]))
+            # after reversing, each point's tag should describe the edge leaving it
+            pts = seg[(a, b)]
+            seg[(a, b)] = [(pts[k][0], pts[k + 1][1] if k + 1 < len(pts) else pts[k][1]) for k in range(len(pts))]
+        else:
+            seg[(a, b)] = route_pair(G, land, a, b, stops)
+
+    return seg
+
+
+def main_bundle(args):
+    with open(os.path.join(args.bundle, 'stops.json'), encoding='utf-8') as f:
+        stops_in = json.load(f)
+    with open(os.path.join(args.bundle, 'legs.json'), encoding='utf-8') as f:
+        legs = json.load(f)
+    pos = {s['id']: (float(s['lat']), float(s['lon'])) for s in stops_in}
+    pairs = {tuple(sorted((l['from'], l['to']))) for l in legs
+             if l['from'] != l['to'] and l['from'] in pos and l['to'] in pos}
+    seg = route_all(pos, pairs, args.cache, BUNDLE_GRID_DEG)
+    features = []
+    for (a, b), v in sorted(seg.items()):
+        tot = osm = 0.0
+        for k in range(len(v) - 1):
+            d = hav(v[k][0], v[k + 1][0])
+            tot += d
+            osm += d if v[k][1] == 'osm' else 0
+        features.append({'type': 'Feature', 'properties': {'a': a, 'b': b, 'osm': round(osm / max(tot, 1e-9), 2)},
+                         'geometry': {'type': 'LineString',
+                                      'coordinates': [[round(c[1], 5), round(c[0], 5)] for c, _ in v]}})
+    out = {'type': 'FeatureCollection',
+           'attribution': 'Route paths: © OpenStreetMap contributors, ODbL',
+           'features': features}
+    path = os.path.join(args.bundle, 'routes.geojson')
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(out, f, separators=(',', ':'))
+    print(f'wrote {path}: {len(features)} stop pairs', file=sys.stderr)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--gtfs', required=True, help='folder with stops.txt, trips.txt, stop_times.txt')
-    ap.add_argument('--out', required=True, help='output folder')
+    ap.add_argument('--gtfs', help='folder with stops.txt, trips.txt, stop_times.txt')
+    ap.add_argument('--out', help='output folder (GTFS mode)')
+    ap.add_argument('--bundle', help='app data folder with stops.json and legs.json; writes routes.geojson there')
     ap.add_argument('--crossings', help='optional crossings.csv (from_harbour,to_harbour)')
     ap.add_argument('--cache', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'osm_cache'))
     args = ap.parse_args()
-    os.makedirs(args.out, exist_ok=True)
+    if not args.bundle and not (args.gtfs and args.out):
+        ap.error('give --bundle, or both --gtfs and --out')
     os.makedirs(args.cache, exist_ok=True)
+    if args.bundle:
+        return main_bundle(args)
+    os.makedirs(args.out, exist_ok=True)
 
     stops_in = read_csv(os.path.join(args.gtfs, 'stops.txt'))
     parent = {s['stop_id']: (s.get('parent_station') or '').strip() or s['stop_id'] for s in stops_in}
@@ -378,31 +518,7 @@ def main():
                 cross_pairs.append((a, b))
                 pairs.add((a, b))
 
-    lats, lons = [p[0] for p in pos.values()], [p[1] for p in pos.values()]
-    bbox = (min(lats) - 0.15, min(lons) - 0.15, max(lats) + 0.15, max(lons) + 0.15)
-    bb = f'{bbox[0]:.3f},{bbox[1]:.3f},{bbox[2]:.3f},{bbox[3]:.3f}'
-    tag = bb.replace(',', '_')
-    ferry = overpass(f'[out:json][timeout:180];way["route"="ferry"]({bb});out geom;',
-                     os.path.join(args.cache, f'ferry_{tag}.json'))['elements']
-    coast = overpass(f'[out:json][timeout:180];way["natural"="coastline"]({bb});out geom;',
-                     os.path.join(args.cache, f'coast_{tag}.json'))['elements']
-    print(f'OSM: {len(ferry)} ferry ways, {len(coast)} coastline ways', file=sys.stderr)
-
-    land = Land(coast)
-    G = build_graph(ferry, land, bbox)
-    used = {s for p in pairs for s in p}
-    stops = {s: attach_stop(G, land, s, pos[s]) for s in used}
-    print(f'graph: {len(G.pos)} nodes; routing {len(pairs)} stop pairs', file=sys.stderr)
-
-    seg = {}
-    for a, b in sorted(pairs):
-        if (b, a) in seg:
-            seg[(a, b)] = list(reversed([(c, s) for c, s in seg[(b, a)]]))
-            # after reversing, each point's tag should describe the edge leaving it
-            pts = seg[(a, b)]
-            seg[(a, b)] = [(pts[k][0], pts[k + 1][1] if k + 1 < len(pts) else pts[k][1]) for k in range(len(pts))]
-        else:
-            seg[(a, b)] = route_pair(G, land, a, b, stops)
+    seg = route_all(pos, pairs, args.cache)
 
     # shapes per distinct stop sequence
     shapes, shape_of_seq, rows = {}, {}, []

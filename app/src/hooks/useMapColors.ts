@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react';
 
+// MapLibre raster paint values for the OpenStreetMap tiles (hue in degrees, others -1..1 or 0..1).
+export type TileTint = {
+  opacity: number;
+  hue: number;
+  saturation: number;
+  contrast: number;
+  brightnessMin: number;
+  brightnessMax: number;
+};
+
 export type MapColors = {
   background: string;
   official: string;
@@ -13,7 +23,12 @@ export type MapColors = {
   landStop: string;
   landOutline: string;
   atoll: string;
+  origin: string;
+  destination: string;
+  tile: TileTint;
 };
+
+type ColorKey = Exclude<keyof MapColors, 'tile'>;
 
 // Used only when a --map-* custom property is empty (tests, no stylesheet loaded).
 const FALLBACK: MapColors = {
@@ -29,9 +44,19 @@ const FALLBACK: MapColors = {
   landStop: '#e3d3a8',
   landOutline: '#b9a77a',
   atoll: '#5f8f9a',
+  origin: '#111827',
+  destination: '#7c3aed',
+  tile: {
+    opacity: 0.6,
+    hue: 0,
+    saturation: -0.55,
+    contrast: -0.1,
+    brightnessMin: 0.08,
+    brightnessMax: 1,
+  },
 };
 
-const VARS: Record<keyof MapColors, string> = {
+const VARS: Record<ColorKey, string> = {
   background: '--map-water',
   official: '--map-official',
   inferred: '--map-inferred',
@@ -44,21 +69,39 @@ const VARS: Record<keyof MapColors, string> = {
   landStop: '--map-land-stop',
   landOutline: '--map-land-outline',
   atoll: '--map-atoll',
+  origin: '--map-origin',
+  destination: '--map-destination',
+};
+
+const TILE_VARS: Record<keyof TileTint, string> = {
+  opacity: '--map-tile-opacity',
+  hue: '--map-tile-hue',
+  saturation: '--map-tile-saturation',
+  contrast: '--map-tile-contrast',
+  brightnessMin: '--map-tile-brightness-min',
+  brightnessMax: '--map-tile-brightness-max',
 };
 
 export function readMapColors(): MapColors {
   if (typeof document === 'undefined') return FALLBACK;
   const style = getComputedStyle(document.documentElement);
-  const out = { ...FALLBACK };
-  for (const key of Object.keys(VARS) as (keyof MapColors)[]) {
+  const out = { ...FALLBACK, tile: { ...FALLBACK.tile } };
+  for (const key of Object.keys(VARS) as ColorKey[]) {
     const value = style.getPropertyValue(VARS[key]).trim();
     if (value) out[key] = value;
+  }
+  for (const key of Object.keys(TILE_VARS) as (keyof TileTint)[]) {
+    const value = parseFloat(style.getPropertyValue(TILE_VARS[key]));
+    if (Number.isFinite(value)) out.tile[key] = value;
   }
   return out;
 }
 
 function sameColors(a: MapColors, b: MapColors): boolean {
-  return (Object.keys(VARS) as (keyof MapColors)[]).every((k) => a[k] === b[k]);
+  return (
+    (Object.keys(VARS) as ColorKey[]).every((k) => a[k] === b[k]) &&
+    (Object.keys(TILE_VARS) as (keyof TileTint)[]).every((k) => a.tile[k] === b.tile[k])
+  );
 }
 
 // Re-reads the tokens when data-theme changes on <html> or the OS colour scheme flips.
