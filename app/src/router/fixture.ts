@@ -1,17 +1,59 @@
 // Router test bundle built from the SRS section 8 scenarios. Test-only; the app loads public/data.
 import type { Bundle, Leg } from './model';
 
-const mtcc = (id: string, routeId: string, tripId: string, from: string, to: string, dep: number, arr: number, days: number[]): Leg => ({
-  id, source: 'mtcc', routeId, tripId, from, to,
-  dep: { min: dep, max: dep }, arr: { min: arr, max: arr },
-  days, validFrom: '2026-01-01', validTo: '2026-12-31', cls: null, evidence: null,
+const mtcc = (
+  id: string,
+  routeId: string,
+  tripId: string,
+  from: string,
+  to: string,
+  dep: number,
+  arr: number,
+  days: number[],
+): Leg => ({
+  id,
+  source: 'mtcc',
+  routeId,
+  tripId,
+  from,
+  to,
+  dep: { min: dep, max: dep },
+  arr: { min: arr, max: arr },
+  days,
+  validFrom: '2026-01-01',
+  validTo: '2026-12-31',
+  cls: null,
+  evidence: null,
 });
 
-const inferred = (id: string, from: string, to: string, dep: [number, number], arr: [number, number], devices = 6, days = 11): Leg => ({
-  id, source: 'inferred', routeId: `inf-${from}-${to}`, tripId: id, from, to,
-  dep: { min: dep[0], max: dep[1] }, arr: { min: arr[0], max: arr[1] },
-  days: [0, 1, 2, 3, 4, 5, 6], validFrom: '2026-01-01', validTo: '2026-12-31', cls: 'fast',
-  evidence: { devices, days, weekdayObs: [2, 2, 1, 2, 1, 1, 2], period: '2025-08', unconfirmedOriginShare: 0.1 },
+const inferred = (
+  id: string,
+  from: string,
+  to: string,
+  dep: [number, number],
+  arr: [number, number],
+  devices = 6,
+  days = 11,
+): Leg => ({
+  id,
+  source: 'inferred',
+  routeId: `inf-${from}-${to}`,
+  tripId: id,
+  from,
+  to,
+  dep: { min: dep[0], max: dep[1] },
+  arr: { min: arr[0], max: arr[1] },
+  days: [0, 1, 2, 3, 4, 5, 6],
+  validFrom: '2026-01-01',
+  validTo: '2026-12-31',
+  cls: 'fast',
+  evidence: {
+    devices,
+    days,
+    weekdayObs: [2, 2, 1, 2, 1, 1, 2],
+    period: '2025-08',
+    unconfirmedOriginShare: 0.1,
+  },
 });
 
 const stop = (id: string, name: string, atoll: string, lat: number, lon: number) =>
@@ -37,12 +79,25 @@ export const fixture: Bundle = {
     inferred('inf-hidden', 'THODDOO', 'MALE', [400, 410], [480, 500], 2, 3), // below minDevices: must never appear
   ],
   config: {
-    timezone: 'Indian/Maldives', bufferOfficialMin: 5, bufferInferredMin: 15, longWaitMin: 120,
-    maxTransfers: 2, horizonHours: 48, shiftStepMin: 5, maxShiftMin: 30, minDevices: 3, minDays: 8,
+    timezone: 'Indian/Maldives',
+    bufferOfficialMin: 5,
+    bufferInferredMin: 15,
+    longWaitMin: 120,
+    maxTransfers: 2,
+    horizonHours: 48,
+    shiftStepMin: 5,
+    maxShiftMin: 30,
+    minDevices: 3,
+    minDays: 8,
   },
   census: {},
   meta: {
-    buildVersion: 'fixture', fixture: true, evidencePeriod: '2025-08', timezoneStatus: 'unconfirmed',
-    speedUnitStatus: 'unconfirmed', clockCorrections: 0, timetableYear: 2026,
+    buildVersion: 'fixture',
+    fixture: true,
+    evidencePeriod: '2025-08',
+    timezoneStatus: 'unconfirmed',
+    speedUnitStatus: 'unconfirmed',
+    clockCorrections: 0,
+    timetableYear: 2026,
   },
 };

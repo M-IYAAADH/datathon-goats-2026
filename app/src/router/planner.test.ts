@@ -3,7 +3,12 @@ import { fixture } from './fixture';
 import type { Journey, Query } from './model';
 import { findJourneys, findWaitAlternatives } from './planner';
 
-const q = (origin: string, date: string, earliestDep = 0): Query => ({ origin, destination: 'MALE', date, earliestDep });
+const q = (origin: string, date: string, earliestDep = 0): Query => ({
+  origin,
+  destination: 'MALE',
+  date,
+  earliestDep,
+});
 const official = (js: Journey[]) => js.find((j) => !j.usesInferred);
 
 describe('findJourneys', () => {
@@ -22,7 +27,11 @@ describe('findJourneys', () => {
       ['MATHIVERI', 515, 'RASDHOO', 655],
       ['RASDHOO', 660, 'MALE', 850],
     ]);
-    expect(j.transfers[0].assessment).toMatchObject({ status: 'safe', waitMin: [5, 5], long: false });
+    expect(j.transfers[0].assessment).toMatchObject({
+      status: 'safe',
+      waitMin: [5, 5],
+      long: false,
+    });
     expect(js.length).toBeLessThanOrEqual(3);
     expect(js.map((x) => x.arr.max)).toEqual([...js.map((x) => x.arr.max)].sort((a, b) => a - b));
   });
@@ -31,7 +40,11 @@ describe('findJourneys', () => {
     const js = findJourneys(fixture, q('THODDOO', '2026-10-25'));
     const j = official(js)!;
     expect([j.dep.min, j.arr.max]).toEqual([390, 850]);
-    expect(j.transfers[0].assessment).toMatchObject({ status: 'safe', waitMin: [200, 200], long: true });
+    expect(j.transfers[0].assessment).toMatchObject({
+      status: 'safe',
+      waitMin: [200, 200],
+      long: true,
+    });
     expect(js.flatMap((x) => x.rides.map((r) => r.tripId))).not.toContain('inf-hidden');
   });
 
@@ -60,18 +73,25 @@ describe('findWaitAlternatives', () => {
     const j = official(findJourneys(fixture, query))!;
     const r = findWaitAlternatives(fixture, query, j, 0);
     expect(r.stop).toBe('RASDHOO');
-    expect(r.alternatives.map((a) => [a.journey.rides[0].tripId, a.savingMin])).toEqual([['inf-ras-mle-1110', [60, 90]]]);
+    expect(r.alternatives.map((a) => [a.journey.rides[0].tripId, a.savingMin])).toEqual([
+      ['inf-ras-mle-1110', [60, 90]],
+    ]);
   });
 
   it('boats that leave too soon after the arrival do not crowd out a catchable alternative', () => {
     const query = q('THODDOO', '2026-10-25');
     const tooSoon = [1, 2, 3].map((n) => ({
       ...fixture.legs.find((l) => l.id === 'inf-ras-mle-1110')!,
-      id: `too-soon-${n}`, tripId: `too-soon-${n}`, dep: { min: 465, max: 470 }, arr: { min: 500, max: 520 },
+      id: `too-soon-${n}`,
+      tripId: `too-soon-${n}`,
+      dep: { min: 465, max: 470 },
+      arr: { min: 500, max: 520 },
     }));
     const bundle = { ...fixture, legs: [...fixture.legs, ...tooSoon] };
     const j = official(findJourneys(bundle, query))!;
-    expect(findWaitAlternatives(bundle, query, j, 0).alternatives.map((a) => a.journey.rides[0].tripId)).toEqual(['inf-ras-mle-1110']);
+    expect(
+      findWaitAlternatives(bundle, query, j, 0).alternatives.map((a) => a.journey.rides[0].tripId),
+    ).toEqual(['inf-ras-mle-1110']);
   });
 
   it('alternatives stay within maxTransfers', () => {
