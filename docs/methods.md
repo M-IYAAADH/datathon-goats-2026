@@ -3,7 +3,7 @@
 ## Data used
 - **MTCC 2026 timetables.** Tables extracted from the published MTCC timetable PDFs (data repo `data/processed/ferry/`). Only trips marked routing-eligible are used. Each published trip keeps one `tripId`, so staying on the same boat is not a transfer.
 - **FollowMe vessel GPS, August 2025, as aggregates only.** Services inferred from device movements (`data/derived/vessels/corridor_services.json` in the data repo). No device IDs, tracks or individual positions are in this repo or the app bundle.
-- **Census 2022, per island.** Population, sex, age bands, disability and elderly-living-alone counts, plus the island coordinates used for stop locations. Source and licence of the extract are not yet confirmed (TODO: team to confirm).
+- **Census 2022, per island.** Population, sex, age bands, disability and elderly-living-alone counts, plus the island coordinates used for stop locations. The per-island extract (209 files, reference year 2022, usual-residence basis) was supplied for the datathon; the extract itself states no publisher or licence, so none is claimed here.
 
 ## How inferred services are derived
 - **Stops are island shorelines.** A boat stop is the island it touches (`stop_location_mode: island_shoreline`), not a jetty. Jetty-level stops were dropped.
