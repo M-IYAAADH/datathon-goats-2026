@@ -63,7 +63,7 @@ export function PlannerForm({
       setError('Error: origin and destination must be different.');
       return;
     }
-    if (!date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       setError('Error: choose a date.');
       return;
     }

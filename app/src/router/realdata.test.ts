@@ -1,13 +1,10 @@
-// Real-data checks T7, T8, T9, T13 (SRS section 8) on the real bundle.
-// The bundle is a test-only copy of branch data/real-bundle (app/public/data) in ./__realdata__,
-// because main still ships the SAMPLE bundle that src/data tests rely on. When the real bundle
-// lands in app/public/data, point these imports at '../../public/data/*.json' and delete __realdata__.
+// Real-data checks T7, T8, T9, T13 (SRS section 8) on the bundle shipped in app/public/data.
 import { beforeAll, describe, expect, it } from 'vitest';
-import stops from './__realdata__/stops.json';
-import legs from './__realdata__/legs.json';
-import config from './__realdata__/config.json';
-import census from './__realdata__/census.json';
-import meta from './__realdata__/meta.json';
+import stops from '../../public/data/stops.json';
+import legs from '../../public/data/legs.json';
+import config from '../../public/data/config.json';
+import census from '../../public/data/census.json';
+import meta from '../../public/data/meta.json';
 import type { Bundle, Journey, Query } from './model';
 import { findJourneys, findWaitAlternatives } from './planner';
 
@@ -24,7 +21,7 @@ const shape = (j: Journey) => j.rides.map((r) => [r.from, r.dep.min, r.to, r.arr
 beforeAll(() => {
   if (!Array.isArray(bundle.legs) || bundle.legs.length === 0 || bundle.meta.fixture !== false) {
     throw new Error(
-      'Real data bundle missing: src/router/__realdata__ must hold the real bundle (meta.fixture false, legs present).',
+      'Real data bundle missing: app/public/data must hold the real bundle (meta.fixture false, legs present).',
     );
   }
 });

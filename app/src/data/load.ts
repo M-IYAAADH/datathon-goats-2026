@@ -240,6 +240,10 @@ function validateConfig(raw: unknown): Config {
   const o = c.obj(raw, '');
   c.str(o, 'timezone', '');
   for (const key of CONFIG_NUMBERS) c.num(o, key, '');
+  // The shift and occurrence loops step by these, so 0 would never end.
+  for (const key of ['shiftStepMin', 'maxShiftMin', 'horizonHours'] as const) {
+    if ((o[key] as number) <= 0) c.fail(key, 'expected a number above 0');
+  }
   return o as unknown as Config;
 }
 

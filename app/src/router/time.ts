@@ -23,21 +23,6 @@ export function weekday(date: string): number {
   return (dayNumber(date) + 4) % 7; // 1970-01-01 was a Thursday
 }
 
-/** "08:35" -> 515. Throws on a bad time. */
-export function parseClock(hhmm: string): number {
-  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm);
-  if (!m || +m[2] > 59) throw new Error(`Invalid time "${hhmm}", expected HH:MM`);
-  return +m[1] * 60 + +m[2];
-}
-
-/** 515 -> "08:35". Minutes past 24 h wrap, with "+1" per extra day (1500 -> "01:00+1"). */
-export function formatClock(min: number): string {
-  const d = Math.floor(min / DAY);
-  const m = min - d * DAY;
-  const s = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-  return d === 0 ? s : `${s}${d > 0 ? '+' : ''}${d}`;
-}
-
 function runsOn(leg: Leg, serviceDate: string): boolean {
   // ISO dates compare correctly as strings.
   return (

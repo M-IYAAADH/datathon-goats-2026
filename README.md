@@ -12,8 +12,8 @@ An inter-island journey planner for the Maldives. It plans multi-leg trips over 
 ## Run it (from a fresh clone)
 
 ```
-git clone https://github.com/NewGate110/Bavathi-goats
-cd Bavathi-goats/app
+git clone https://github.com/M-IYAAADH/datathon-goats-2026
+cd datathon-goats-2026/app
 npm install
 npm test          # Vitest: router and data-loader tests
 npm run dev       # Vite dev server, open the printed http://localhost URL
@@ -37,19 +37,20 @@ tools/             build_shapes.py (map shape helper)
 
 ## Data in `app/public/data`
 
-| File | Contents |
-|---|---|
-| `stops.json` | Islands/hubs: id, name, atoll, lat/lon (island point), census key |
-| `legs.json` | One record per boardable segment, official (`mtcc`) and inferred |
+| File          | Contents                                                                                          |
+| ------------- | ------------------------------------------------------------------------------------------------- |
+| `stops.json`  | Islands/hubs: id, name, atoll, lat/lon (island point), census key                                 |
+| `legs.json`   | One record per boardable segment, official (`mtcc`) and inferred                                  |
 | `config.json` | Every threshold the router uses (buffers, long-wait, transfers, shift limits, disclosure minimum) |
-| `census.json` | Census 2022 counts per island, keyed by stop `censusKey` |
-| `meta.json` | Build version, `fixture` flag, evidence period, time-zone/speed-unit status |
+| `census.json` | Census 2022 counts per island, keyed by stop `censusKey`                                          |
+| `meta.json`   | Build version, `fixture` flag, evidence period, time-zone/speed-unit status                       |
 
 Field definitions: `docs/data_dictionary.md`. Times are integer minutes since 00:00 Maldives time (UTC+5); values of 1440 or more are after midnight.
 
 Which bundle is in the repo: the real bundle (`meta.json` `"fixture": false`) comes in through the data PRs. It is built by `scripts/build_app_data.py` in the data repo (see below) with build version `2026-10-24T17:00+05:00`. If `meta.json` ever has `"fixture": true`, the files are hand-made sample data and the app shows a "SAMPLE DATA" banner.
 
 The bundle is limited to the central study region: atolls AA, ADh, K, V and Greater Malé. Alongside the five JSON files it adds two map layers:
+
 - `islands.geojson`: island footprints from OneMap (OneMap Data Usage License).
 - `atolls.geojson`: convex hulls of the COD-AB v02 / OneMap island polygons. Display only; not a legal or reef boundary.
 
