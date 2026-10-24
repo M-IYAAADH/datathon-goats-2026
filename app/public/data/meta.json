@@ -5,5 +5,15 @@
  "timezoneStatus": "unconfirmed",
  "speedUnitStatus": "unconfirmed",
  "clockCorrections": 0,
- "timetableYear": 2026
+ "timetableYear": 2026,
+ "region": {
+  "atolls": [
+   "AA",
+   "ADH",
+   "K",
+   "MLE",
+   "V"
+  ],
+  "name": "Central Maldives study region (AA, ADh, K, V, Greater Malé)"
+ }
 }
