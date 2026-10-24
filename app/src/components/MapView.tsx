@@ -490,7 +490,16 @@ export function MapView({
     const text = [...new Set([land?.attribution, atolls?.attribution].filter(Boolean))].join(' | ');
     if (!map || !mapReady || !text) return;
     const control = new AttributionControl({ compact: true, customAttribution: text });
-    map.addControl(control, 'top-right');
+    // The credit is long: on phones put it top-right (the legend is bottom-left) and
+    // start collapsed to the (i) button; tap to read it.
+    const narrow = map.getContainer().clientWidth < 600;
+    map.addControl(control, narrow ? 'top-right' : 'bottom-right');
+    if (narrow) {
+      map
+        .getContainer()
+        .querySelector('.maplibregl-ctrl-attrib.maplibregl-compact')
+        ?.classList.remove('maplibregl-compact-show');
+    }
     return () => {
       map.removeControl(control);
     };

@@ -76,6 +76,7 @@
 
 .map-view .maplibregl-ctrl-attrib {
   font-size: 10px;
+  max-width: min(520px, calc(100% - 20px));
 }
 
 /* maplibre forces visibility:visible on the open compact attribution; let it follow a
