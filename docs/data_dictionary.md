@@ -1,6 +1,6 @@
 # Data dictionary
 
-The app loads five JSON files from `app/public/data/`. The TypeScript types in `app/src/router/model.ts` are the authoritative contract; this page restates them.
+The app loads five JSON files (plus two GeoJSON map layers, below) from `app/public/data/`. The TypeScript types in `app/src/router/model.ts` are the authoritative contract; this page restates them.
 
 Conventions: times are integer minutes since 00:00 of the service date in Maldives time (UTC+5, no DST); 1440 or more means after midnight. Weekdays are 0 = Sunday … 6 = Saturday. Dates are `"YYYY-MM-DD"`. A `Range` is `{ "min": number, "max": number }`; official legs have `min === max`, inferred legs are ranges.
 
@@ -71,5 +71,27 @@ Conventions: times are integer minutes since 00:00 of the service date in Maldiv
 | speedUnitStatus | string | e.g. `"unconfirmed"` |
 | clockCorrections | number | Clock corrections applied by the data repo (0) |
 | timetableYear | number | MTCC timetable year (2026) |
+| region | object (extra key, not in `model.ts`) | Study region: `atolls` (string[], e.g. `["AA","ADH","K","MLE","V"]`) and `name` (string) |
+
+## Map layers (GeoJSON, display only; not part of the `Bundle` type)
+
+### islands.geojson — FeatureCollection of island footprints
+Source: OneMap (Geomatics Department, Ministry of Infrastructure, Housing and Urban Development), layer `island_20240509`, OneMap Data Usage License; the attribution is in the file's top-level `attribution` key. Geometry: Polygon or MultiPolygon.
+| Property | Type | Meaning |
+|---|---|---|
+| code | string | Island code, e.g. `LD0004` (same format as `Stop.censusKey`) |
+| name | string | Island name |
+| atoll | string | Atoll code |
+| category | string | OneMap category, e.g. `Residential Island` |
+| isStop | boolean | true if the island is a stop in `stops.json` |
+
+### atolls.geojson — FeatureCollection of atoll outlines
+Source: Government of Maldives / OCHA COD-AB v02 (CC BY-IGO) and OneMap island polygons; attribution in the top-level `attribution` key. Geometry: Polygon. Display outline only, not a legal or reef boundary.
+| Property | Type | Meaning |
+|---|---|---|
+| code | string | Atoll code, e.g. `AA` |
+| name | string | Atoll name |
+| pcode | string | COD-AB P-code, e.g. `MV008` |
+| method | string | How the outline was made (convex hull) |
 
 Extra keys in a file (for example a `buildVersion` in `config.json`) are allowed but not read by the router.
